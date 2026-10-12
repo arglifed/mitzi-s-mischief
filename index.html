@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Mitzi's Mischief NGPC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=DotGothic16&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #222;
+            text-align: center;
+            margin-top: 20px;
+            color: #fff;
+            font-family: monospace;
+        }
+
+        #game-wrapper {
+            position: relative;
+            width: 640px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 640px;
+            height: 608px;
+            background-color: #9bbc0f;
+            border: 12px solid #111;
+            border-radius: 8px;
+            image-rendering: pixelated;
+            box-sizing: border-box;
+            display: block;
+        }
+
+        #main-menu-ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            background: rgba(10, 5, 20, 0.65);
+            backdrop-filter: blur(2px);
+        }
+
+        #menu-fx {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        #main-menu-ui h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 38px;
+            margin: 0 0 30px 0;
+            color: #fff;
+            text-shadow: 0 0 10px #ff0077, 0 0 20px #ff0077;
+            z-index: 2;
+            letter-spacing: 2px;
+        }
+
+        .menu-btn {
+            font-family: 'DotGothic16', sans-serif;
+            font-size: 18px;
+            background: #111;
+            color: #fff;
+            border: 2px solid #ff0077;
+            padding: 10px 24px;
+            margin: 8px;
+            cursor: pointer;
+            z-index: 2;
+            border-radius: 4px;
+            transition: all 0.2s;
+            box-shadow: 0 0 8px rgba(255, 0, 119, 0.4);
+        }
+
+        .menu-btn:hover {
+            background: #ff0077;
+            color: #fff;
+            box-shadow: 0 0 15px rgba(255, 0, 119, 0.8);
+            transform: scale(1.05);
+        }
+
+        #settings-ui {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 420px;
+            box-sizing: border-box;
+            background: rgba(17, 17, 17, 0.95);
+            border: 3px solid #ffcc00;
+            border-radius: 8px;
+            padding: 24px;
+            z-index: 20;
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.9);
+            font-family: 'DotGothic16', sans-serif;
+        }
+
+        #settings-ui h2 {
+            font-family: 'Cinzel', serif;
+            color: #ffcc00;
+            margin-top: 0;
+            text-shadow: 0 0 8px #ffcc00;
+        }
+
+        .rebind-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 15px 0 20px 0;
+        }
+
+        .rebind-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .rebind-label {
+            font-family: 'DotGothic16', sans-serif;
+            font-size: 16px;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+
+        .rebind-btn {
+            font-family: 'DotGothic16', sans-serif;
+            font-size: 14px;
+            background: #111;
+            color: #ffcc00;
+            border: 2px solid #ffcc00;
+            padding: 4px 14px;
+            min-width: 110px;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 0 6px rgba(255, 204, 0, 0.3);
+            transition: all 0.2s;
+        }
+
+        .rebind-btn:hover {
+            background: #ffcc00;
+            color: #111;
+            box-shadow: 0 0 12px rgba(255, 204, 0, 0.6);
+        }
+
+        .rebind-btn.active {
+            background: #ff0077;
+            border-color: #ff0077;
+            color: #fff;
+            box-shadow: 0 0 12px rgba(255, 0, 119, 0.8);
+        }
+
+        /* Cloud & Petal Animations */
+        .cloud {
+            position: absolute;
+            background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: cloudDrift linear infinite;
+        }
+
+        @keyframes cloudDrift {
+            0% {
+                transform: translateX(-150px);
+                opacity: 0;
+            }
+            20% {
+                opacity: 0.35;
+            }
+            80% {
+                opacity: 0.35;
+            }
+            100% {
+                transform: translateX(650px);
+                opacity: 0;
+            }
+        }
+
+        .fish {
+            position: absolute;
+            width: 12px;
+            height: 8px;
+            background: #9cb8cc;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            animation: fishFallRight linear infinite;
+        }
+
+        .fish.fish-right {
+            animation-name: fishFallRight;
+        }
+
+        .fish.fish-left {
+            animation-name: fishFallLeft;
+        }
+
+        .fish.fish-wiggle-right {
+            animation-name: fishFallWiggleRight;
+        }
+
+        .fish.fish-wiggle-left {
+            animation-name: fishFallWiggleLeft;
+        }
+
+        .fish::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: -5px;
+            transform: translateY(-50%);
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+            border-left: 6px solid #9cb8cc;
+        }
+
+        @keyframes fishFallRight {
+            0% {
+                transform: translate(0, -25px) rotate(-30deg);
+                opacity: 0;
+            }
+            15% {
+                opacity: 0.85;
+                transform: translate(25px, 80px) rotate(15deg);
+            }
+            35% {
+                transform: translate(55px, 200px) rotate(-25deg);
+            }
+            60% {
+                transform: translate(90px, 350px) rotate(20deg);
+            }
+            85% {
+                opacity: 0.85;
+                transform: translate(120px, 480px) rotate(-15deg);
+            }
+            100% {
+                transform: translate(150px, 630px) rotate(25deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes fishFallLeft {
+            0% {
+                transform: translate(0, -25px) scaleX(-1) rotate(-30deg);
+                opacity: 0;
+            }
+            15% {
+                opacity: 0.85;
+                transform: translate(-25px, 80px) scaleX(-1) rotate(15deg);
+            }
+            35% {
+                transform: translate(-55px, 200px) scaleX(-1) rotate(-25deg);
+            }
+            60% {
+                transform: translate(-90px, 350px) scaleX(-1) rotate(20deg);
+            }
+            85% {
+                opacity: 0.85;
+                transform: translate(-120px, 480px) scaleX(-1) rotate(-15deg);
+            }
+            100% {
+                transform: translate(-150px, 630px) scaleX(-1) rotate(25deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes fishFallWiggleRight {
+            0% {
+                transform: translate(0, -25px) rotate(10deg);
+                opacity: 0;
+            }
+            20% {
+                opacity: 0.85;
+                transform: translate(30px, 110px) rotate(-45deg);
+            }
+            45% {
+                transform: translate(65px, 250px) rotate(35deg);
+            }
+            70% {
+                transform: translate(100px, 410px) rotate(-40deg);
+            }
+            85% {
+                opacity: 0.85;
+                transform: translate(125px, 500px) rotate(25deg);
+            }
+            100% {
+                transform: translate(145px, 630px) rotate(-30deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes fishFallWiggleLeft {
+            0% {
+                transform: translate(0, -25px) scaleX(-1) rotate(10deg);
+                opacity: 0;
+            }
+            20% {
+                opacity: 0.85;
+                transform: translate(-30px, 110px) scaleX(-1) rotate(-45deg);
+            }
+            45% {
+                transform: translate(-65px, 250px) scaleX(-1) rotate(35deg);
+            }
+            70% {
+                transform: translate(-100px, 410px) scaleX(-1) rotate(-40deg);
+            }
+            85% {
+                opacity: 0.85;
+                transform: translate(-125px, 500px) scaleX(-1) rotate(25deg);
+            }
+            100% {
+                transform: translate(-145px, 630px) scaleX(-1) rotate(-30deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Mitzi's Mischief - NGPC Spec</h2>
+    <div id="game-wrapper" style="position: relative; width: 640px; margin: 0 auto; overflow: hidden;">
+        <canvas id="gameCanvas" width="160" height="152"></canvas>
+
+        <div id="hud-ui" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;">
+            <div id="hud-score" style="position: absolute; top: 16px; left: 16px; font-family: 'DotGothic16', sans-serif; font-size: 24px; color: #fff; text-shadow: 2px 2px 0px #000;">SCORE: 0</div>
+        </div>
+
+        <div id="message-ui" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 6; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.7);">
+            <h2 id="message-title" style="font-family: 'DotGothic16', sans-serif; font-size: 48px; color: #fff; margin: 0; text-shadow: 4px 4px 0px #ff0077;">GAME OVER</h2>
+            <p id="message-sub" style="font-family: 'DotGothic16', sans-serif; font-size: 24px; color: #fff; margin-top: 10px; text-shadow: 2px 2px 0px #000;">PRESS [SPACE] TO RESTART</p>
+        </div>
+
+        <div id="main-menu-ui">
+            <div id="menu-fx"></div>
+            <h1>Mitzi's Mischief</h1>
+            <div style="z-index: 2; display: flex; flex-direction: column; align-items: center;">
+                <button id="btn-start" class="menu-btn">START MISCHIEF</button>
+                <button id="btn-settings" class="menu-btn">SETTINGS</button>
+            </div>
+        </div>
+
+        <div id="settings-ui" style="display: none;">
+            <h2>SETTINGS</h2>
+            <div style="margin: 20px 0; font-size: 16px; line-height: 1.8;">
+                <div style="margin-bottom: 12px; font-weight: bold; color: #ffcc00; letter-spacing: 1px;">CONTROLS & KEYBINDINGS</div>
+                <label style="color:#ffcc00; display:flex; align-items:center; cursor:pointer;"><input type="checkbox" id="dev-mode-toggle" style="margin-right:10px;"> Enable Dev Controls</label>
+                <p style="color:#fff; font-size:12px; margin-left:25px; text-align:left;"><strong>Press 3:</strong> Skip to Boss / Kill Boss<br><strong>Press 9:</strong> Toggle God Mode</p>
+                <div class="rebind-container">
+                    <div class="rebind-row">
+                        <span class="rebind-label">UP</span>
+                        <button id="btn-bind-up" class="rebind-btn">ArrowUp</button>
+                    </div>
+                    <div class="rebind-row">
+                        <span class="rebind-label">DOWN</span>
+                        <button id="btn-bind-down" class="rebind-btn">ArrowDown</button>
+                    </div>
+                    <div class="rebind-row">
+                        <span class="rebind-label">LEFT</span>
+                        <button id="btn-bind-left" class="rebind-btn">ArrowLeft</button>
+                    </div>
+                    <div class="rebind-row">
+                        <span class="rebind-label">RIGHT</span>
+                        <button id="btn-bind-right" class="rebind-btn">ArrowRight</button>
+                    </div>
+                    <div class="rebind-row">
+                        <span class="rebind-label">SHOOT</span>
+                        <button id="btn-bind-shoot" class="rebind-btn">Space</button>
+                    </div>
+                </div>
+            </div>
+            <button id="btn-close-settings" class="menu-btn">CLOSE</button>
+        </div>
+    </div>
+    <p>Arrow Keys: Move | SPACE: Shoot</p>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        ctx.imageSmoothingEnabled = false;
+
+        let keyMap = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", shoot: " " };
+        try {
+            if (typeof localStorage !== 'undefined') {
+                keyMap = JSON.parse(localStorage.getItem('mitziBinds')) || keyMap;
+            }
+        } catch (e) {}
+
+        let rebindingAction = null;
+        const keys = {};
+        let devMode = false;
+        let godMode = false;
+        let transitionTimer = 0;
+
+        function formatKeyName(key) {
+            if (key === " ") return "Space";
+            return key;
+        }
+
+        function updateRebindButtons() {
+            const actions = ['up', 'down', 'left', 'right', 'shoot'];
+            actions.forEach(action => {
+                const btn = document.getElementById(`btn-bind-${action}`);
+                if (btn) {
+                    btn.innerText = formatKeyName(keyMap[action]);
+                    if (btn.classList && btn.classList.remove) {
+                        btn.classList.remove('active');
+                    }
+                }
+            });
+        }
+
+        window.addEventListener("keydown", (e) => {
+            if (rebindingAction) {
+                if (e.preventDefault) e.preventDefault();
+                keyMap[rebindingAction] = e.key;
+                try {
+                    if (typeof localStorage !== 'undefined') {
+                        localStorage.setItem('mitziBinds', JSON.stringify(keyMap));
+                    }
+                } catch (err) {}
+                updateRebindButtons();
+                rebindingAction = null;
+                return;
+            }
+
+            if (devMode) {
+                if (e.key === '3') {
+                    if (gameState === 'PLAYING') {
+                        cameraX = stageConfigs[currentStage - 1].bossDistance;
+                    } else if (gameState === 'BOSS_FIGHT') {
+                        boss.hp = 0;
+                    }
+                }
+                if (e.key === '9') {
+                    godMode = !godMode;
+                }
+            }
+
+            if (e.key === keyMap.shoot || e.key === " ") {
+                if (gameState === 'GAME_OVER' || gameState === 'GAME_CLEAR') {
+                    resetGame();
+                    gameState = 'PLAYING';
+                    const menu = document.getElementById('main-menu-ui');
+                    if (menu && menu.style) menu.style.display = 'none';
+                    keys[e.key] = false;
+                    return;
+                } else if (gameState === 'STAGE_TRANSITION') {
+                    currentStage++;
+                    activeStage = stageConfigs[currentStage - 1];
+                    cameraX = 0;
+                    mitzi.x = 20;
+                    mitzi.y = 70;
+                    mitzi.magic = null;
+                    gameState = 'PLAYING';
+                    keys[e.key] = false;
+                    return;
+                }
+            }
+            keys[e.key] = true;
+        });
+        window.addEventListener("keyup", (e) => keys[e.key] = false);
+
+        let score = 0;
+
+        function resetGame() {
+            score = 0;
+            bullets.length = 0;
+            bossBullets.length = 0;
+            enemies.length = 0;
+            crystals.length = 0;
+            cameraX = 0;
+            currentStage = 1;
+            boss.active = false;
+            boss.hp = boss.maxHP;
+            boss.shootTimer = 0;
+            mitzi.x = 20;
+            mitzi.y = 70;
+            mitzi.dead = false;
+            mitzi.hp = mitzi.maxHP;
+            mitzi.iFrames = 0;
+            mitzi.magic = null;
+            mitzi.cooldown = 0;
+            transitionTimer = 0;
+            if (keyMap && keyMap.shoot) keys[keyMap.shoot] = false;
+            keys[" "] = false;
+        }
+
+        // Mitzi Player Image
+        const mitziImg = new Image();
+        mitziImg.src = "mitzi_player.png";
+
+        // Lag-Spike Enemy Sprite (8x8)
+        const lagSpikePixels = [
+            [0, 0, 0, 1, 1, 0, 0, 0],
+            [0, 1, 0, 1, 1, 0, 1, 0],
+            [0, 0, 1, 2, 2, 1, 0, 0],
+            [1, 1, 2, 2, 2, 2, 1, 1],
+            [1, 1, 2, 2, 2, 2, 1, 1],
+            [0, 0, 1, 2, 2, 1, 0, 0],
+            [0, 1, 0, 1, 1, 0, 1, 0],
+            [0, 0, 0, 1, 1, 0, 0, 0]
+        ];
+
+        const palette = { 1: "#111111", 2: "#ff0077", 3: "#ffffff", 4: "#ffcc00" };
+
+        const mitzi = { x: 20, y: 70, speed: 2, cooldown: 0, width: 32, height: 32, magic: null, dead: false, hp: 3, maxHP: 3, iFrames: 0 };
+        const bullets = [];
+        const bossBullets = [];
+        const enemies = [];
+        const crystals = [];
+        const magicColors = [2, 4]; // Pink = Homing, Yellow = Piercing
+        let cameraX = 0;
+        let frameCount = 0;
+        let currentStage = 1;
+        let gameState = 'START_MENU';
+
+        const stars = [];
+        for (let i = 0; i < 30; i++) {
+            stars.push({
+                x: Math.random() * 160,
+                y: Math.random() * 80,
+                size: Math.random() > 0.8 ? 2 : 1,
+                color: Math.random() > 0.5 ? "#ffffff" : "#888888"
+            });
+        }
+
+        const tilesetImg = new Image();
+        tilesetImg.src = "./tileset_legacy.png";
+
+        const stage1Img = new Image();
+        stage1Img.src = './stage1_bg.png';
+
+        const bambooImg = new Image();
+        bambooImg.src = "./bamboo_bg.png";
+
+        const cityImg = new Image();
+        cityImg.src = './city_bg.png';
+
+        const pubImg = new Image();
+        pubImg.src = './retropub_bg.png';
+
+        const wifiImg = new Image();
+        wifiImg.src = './wifi_maiden_bg.png';
+
+        const fortressImg = new Image();
+        fortressImg.src = './fortress_bg.png';
+
+        const bossBg1 = new Image(); bossBg1.src = './boss_arena_1.png';
+        const bossBg2 = new Image(); bossBg2.src = './boss_arena_2.png';
+        const bossBg3 = new Image(); bossBg3.src = './boss_arena_3.png';
+        const bossBg4 = new Image(); bossBg4.src = './boss_arena_4.png';
+        const bossBg5 = new Image(); bossBg5.src = './boss_arena_5.png';
+        const bossBg6 = new Image(); bossBg6.src = './boss_arena_6.png';
+
+        const tileMapDefs = {
+            // Stage 1 (Forest)
+            1: [0, 0], // Grass Surface
+            2: [1, 0], // Dirt Underground
+            3: [0, 1], // Tree
+            4: [0, 1], // Tree Alt
+            5: [0, 2], // Bush
+            6: [0, 3], // Fence
+
+            // Stage 2 (Bamboo) - Row 4
+            11: [0, 4], // Bamboo Surface
+            12: [1, 4], // Bamboo Underground
+
+            // Stage 3 (City) - Row 5
+            21: [0, 5], // Pavement Surface
+            22: [1, 5], // Concrete Underground
+
+            // Stage 4 (Retropub) - Row 6
+            31: [0, 6], // Arcade Carpet
+            32: [1, 6], // Floor Base
+
+            // Stage 5 (WiFi Maiden) - Row 7
+            41: [0, 7], // Server Floor Surface
+            42: [1, 7], // Server Base
+
+            // Stage 6 (Fortress) - Row 8
+            51: [0, 8], // Stone Surface
+            52: [1, 8]  // Stone Base
+        };
+
+        const mapStage1 = [
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,3,0,0,5,0,0,6,6,0, 4,0,0,0,0,3,0,5,0,0, 0,6,0,0,4,0,0,5,0,0],
+            [1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1],
+            [2,2,2,2,2,2,2,2,2,2, 2,2,2,2,2,2,2,2,2,2, 2,2,2,2,2,2,2,2,2,2],
+            [2,2,2,2,2,2,2,2,2,2, 2,2,2,2,2,2,2,2,2,2, 2,2,2,2,2,2,2,2,2,2]
+        ];
+
+        const mapStage2 = [
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [11,11,11,11,11,11,11,11,11,11, 11,11,11,11,11,11,11,11,11,11, 11,11,11,11,11,11,11,11,11,11],
+            [12,12,12,12,12,12,12,12,12,12, 12,12,12,12,12,12,12,12,12,12, 12,12,12,12,12,12,12,12,12,12],
+            [12,12,12,12,12,12,12,12,12,12, 12,12,12,12,12,12,12,12,12,12, 12,12,12,12,12,12,12,12,12,12]
+        ];
+
+        const mapStage3 = [
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [21,21,21,21,21,21,21,21,21,21, 21,21,21,21,21,21,21,21,21,21, 21,21,21,21,21,21,21,21,21,21],
+            [22,22,22,22,22,22,22,22,22,22, 22,22,22,22,22,22,22,22,22,22, 22,22,22,22,22,22,22,22,22,22],
+            [22,22,22,22,22,22,22,22,22,22, 22,22,22,22,22,22,22,22,22,22, 22,22,22,22,22,22,22,22,22,22]
+        ];
+
+        const mapStage4 = [
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [31,31,31,31,31,31,31,31,31,31, 31,31,31,31,31,31,31,31,31,31, 31,31,31,31,31,31,31,31,31,31],
+            [32,32,32,32,32,32,32,32,32,32, 32,32,32,32,32,32,32,32,32,32, 32,32,32,32,32,32,32,32,32,32],
+            [32,32,32,32,32,32,32,32,32,32, 32,32,32,32,32,32,32,32,32,32, 32,32,32,32,32,32,32,32,32,32]
+        ];
+
+        const mapStage5 = [
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [41,41,41,41,41,41,41,41,41,41, 41,41,41,41,41,41,41,41,41,41, 41,41,41,41,41,41,41,41,41,41],
+            [42,42,42,42,42,42,42,42,42,42, 42,42,42,42,42,42,42,42,42,42, 42,42,42,42,42,42,42,42,42,42],
+            [42,42,42,42,42,42,42,42,42,42, 42,42,42,42,42,42,42,42,42,42, 42,42,42,42,42,42,42,42,42,42]
+        ];
+
+        const mapStage6 = [
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
+            [51,51,51,51,51,51,51,51,51,51, 51,51,51,51,51,51,51,51,51,51, 51,51,51,51,51,51,51,51,51,51],
+            [52,52,52,52,52,52,52,52,52,52, 52,52,52,52,52,52,52,52,52,52, 52,52,52,52,52,52,52,52,52,52],
+            [52,52,52,52,52,52,52,52,52,52, 52,52,52,52,52,52,52,52,52,52, 52,52,52,52,52,52,52,52,52,52]
+        ];
+
+        const stageConfigs = [
+            { hasProceduralSky: false, bgImagePath: './stage1_bg.png', bgImage: stage1Img, parallaxSpeed: 0.2, bossDistance: 5000, bossBgImage: bossBg1, tileset: tilesetImg, foregroundMap: mapStage1, hideTilesDuringBoss: false },
+            { hasProceduralSky: false, bgImagePath: './bamboo_bg.png', bgImage: bambooImg, parallaxSpeed: 0.3, bossDistance: 5000, bossBgImage: bossBg2, tileset: tilesetImg, foregroundMap: mapStage2, hideTilesDuringBoss: true },
+            { hasProceduralSky: false, bgImagePath: './city_bg.png', bgImage: cityImg, parallaxSpeed: 0.25, bossDistance: 5000, bossBgImage: bossBg3, tileset: tilesetImg, foregroundMap: mapStage3, hideTilesDuringBoss: true },
+            { hasProceduralSky: false, bgImagePath: './retropub_bg.png', bgImage: pubImg, parallaxSpeed: 0.35, bossDistance: 5000, bossBgImage: bossBg4, tileset: tilesetImg, foregroundMap: mapStage4, hideTilesDuringBoss: true },
+            { hasProceduralSky: false, bgImagePath: './wifi_maiden_bg.png', bgImage: wifiImg, parallaxSpeed: 0.3, bossDistance: 5000, bossBgImage: bossBg5, tileset: tilesetImg, foregroundMap: mapStage5, hideTilesDuringBoss: true },
+            { hasProceduralSky: false, bgImagePath: './fortress_bg.png', bgImage: fortressImg, parallaxSpeed: 0.4, bossDistance: 5000, bossBgImage: bossBg6, tileset: tilesetImg, foregroundMap: mapStage6, hideTilesDuringBoss: true }
+        ];
+
+        let activeStage = stageConfigs[0];
+
+        const crystalPixels = [
+            [0, 1, 1, 1, 1, 1, 0, 0],
+            [1, 3, 2, 2, 2, 2, 1, 0],
+            [1, 2, 2, 3, 2, 2, 1, 0],
+            [1, 2, 2, 2, 2, 2, 1, 0],
+            [1, 2, 2, 2, 2, 1, 0, 0],
+            [0, 1, 2, 2, 1, 0, 0, 0],
+            [0, 0, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0]
+        ];
+
+        class Boss {
+            constructor() {
+                this.x = 0;
+                this.y = 20;
+                this.width = 32;
+                this.height = 32;
+                this.maxHP = 50;
+                this.hp = 50;
+                this.speed = 1.5;
+                this.active = false;
+                this.direction = 1;
+                this.shootTimer = 0;
+            }
+            update() {
+                if (!this.active) return;
+
+                switch (currentStage) {
+                    case 1:
+                        // Stage 1 (Forest): Up/down movement and 3-way spread shot
+                        this.y += this.speed * this.direction;
+                        if (this.y <= 0 || this.y >= 112 - this.height) { // 80px (stays above grass)
+                            this.direction *= -1;
+                        }
+
+                        this.shootTimer++;
+                        if (this.shootTimer >= 90) {
+                            const startX = this.x;
+                            const startY = this.y + this.height / 2;
+                            bossBullets.push(
+                                { x: startX, y: startY, width: 4, height: 4, speed: 3, dy: -1 },
+                                { x: startX, y: startY, width: 4, height: 4, speed: 3, dy: 0 },
+                                { x: startX, y: startY, width: 4, height: 4, speed: 3, dy: 1 }
+                            );
+                            this.shootTimer = 0;
+                        }
+                        break;
+
+                    case 2:
+                        // Stage 2 (Bamboo): Erratic hover and staggered burst fire
+                        this.y = 40 + Math.sin(frameCount * 0.05) * 30;
+
+                        this.shootTimer++;
+                        if (this.shootTimer >= 120) {
+                            const startY = this.y + this.height / 2;
+                            bossBullets.push(
+                                { x: this.x, y: startY, width: 4, height: 4, speed: 4.5, dy: 0 },
+                                { x: this.x + 15, y: startY, width: 4, height: 4, speed: 4.5, dy: 0 },
+                                { x: this.x + 30, y: startY, width: 4, height: 4, speed: 4.5, dy: 0 }
+                            );
+                            this.shootTimer = 0;
+                        }
+                        break;
+
+                    case 3:
+                        // Stage 3 (City) - The Sweeper: Up/down movement and rhythmic sweeping arc
+                        this.y += 2 * this.direction;
+                        if (this.y <= 0 || this.y >= 112 - this.height) {
+                            this.direction *= -1;
+                        }
+
+                        this.shootTimer++;
+                        if (this.shootTimer >= 45) {
+                            this.sweepAngle = (this.sweepAngle || 0) + 0.5;
+                            const startY = this.y + this.height / 2;
+                            bossBullets.push({
+                                x: this.x,
+                                y: startY,
+                                width: 4,
+                                height: 4,
+                                speed: 3,
+                                dy: Math.sin(this.sweepAngle) * 2
+                            });
+                            this.shootTimer = 0;
+                        }
+                        break;
+
+                    case 4:
+                        // Stage 4 (Retropub) - The 4-Way Cross: Centered park and 4-way cross spread
+                        this.y = (112 / 2) - (this.height / 2);
+
+                        this.shootTimer++;
+                        if (this.shootTimer >= 120) {
+                            const startX = this.x;
+                            const startY = this.y + this.height / 2;
+                            bossBullets.push(
+                                { x: startX, y: startY, width: 4, height: 4, dx: -1.5, dy: -1.5 },
+                                { x: startX, y: startY, width: 4, height: 4, dx: -1.5, dy: 1.5 },
+                                { x: startX, y: startY, width: 4, height: 4, dx: -2.5, dy: 0 },
+                                { x: startX, y: startY, width: 4, height: 4, dx: -0.8, dy: 0 }
+                            );
+                            this.shootTimer = 0;
+                        }
+                        break;
+
+                    case 5:
+                        // Stage 5 (WiFi Maiden) - The Signal Wave: Teleporting and 5-way broadcast fan
+                        this.moveTimer = (this.moveTimer || 0) + 1;
+                        if (this.moveTimer >= 150) {
+                            this.y = Math.floor(Math.random() * (70 - 10 + 1)) + 10;
+                            this.moveTimer = 0;
+                        }
+
+                        this.shootTimer++;
+                        if (this.shootTimer >= 100) {
+                            const startX = this.x;
+                            const startY = this.y + this.height / 2;
+                            [-2, -1, 0, 1, 2].forEach(dy => {
+                                bossBullets.push({ x: startX, y: startY, width: 4, height: 4, speed: 4, dy: dy });
+                            });
+                            this.shootTimer = 0;
+                        }
+                        break;
+
+                    case 6:
+                        // Stage 6 (Fortress) - The Spiral Hell: Figure-8 movement and spiral bullet hell
+                        this.y = 40 + Math.sin(frameCount * 0.03) * 25;
+                        this.x = (canvas.width - this.width - 15) + Math.cos(frameCount * 0.06) * 10;
+
+                        this.shootTimer++;
+                        if (this.shootTimer >= 10) {
+                            this.rot = (this.rot || 0) + 0.4;
+                            const startX = this.x;
+                            const startY = this.y + this.height / 2;
+                            const dx = -2 - Math.cos(this.rot) * 2;
+                            const dy = Math.sin(this.rot) * 2;
+                            bossBullets.push({ x: startX, y: startY, width: 4, height: 4, dx: dx, dy: dy });
+                            this.shootTimer = 0;
+                        }
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+            draw() {
+                if (!this.active) return;
+                ctx.fillStyle = '#ff0044';
+                ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.width, this.height);
+            }
+        }
+        const boss = new Boss();
+
+        function checkCollision(r1, r2) {
+            return Math.floor(r1.x) < Math.floor(r2.x + r2.width) &&
+                   Math.floor(r1.x + r1.width) > Math.floor(r2.x) &&
+                   Math.floor(r1.y) < Math.floor(r2.y + r2.height) &&
+                   Math.floor(r1.y + r1.height) > Math.floor(r2.y);
+        }
+
+        function getMitziHitbox() {
+            return { x: mitzi.x + 14, y: mitzi.y + 14, width: 4, height: 4 };
+        }
+
+        // Strict integer sprite renderer
+        function drawSprite(x, y, pixelArray, paletteSwap = null) {
+            const drawX = Math.floor(x);
+            const drawY = Math.floor(y);
+            for (let row = 0; row < pixelArray.length; row++) {
+                for (let col = 0; col < pixelArray[row].length; col++) {
+                    const colorCode = pixelArray[row][col];
+                    if (colorCode !== 0) {
+                        if (paletteSwap && paletteSwap[colorCode]) {
+                            ctx.fillStyle = palette[paletteSwap[colorCode]];
+                        } else {
+                            ctx.fillStyle = palette[colorCode];
+                        }
+                        ctx.fillRect(drawX + col, drawY + row, 1, 1);
+                    }
+                }
+            }
+        }
+
+        function drawBackground() {
+            let activeStage = stageConfigs[currentStage - 1];
+
+            let bossBgWidth = (activeStage.bossBgImage && activeStage.bossBgImage.width) ? activeStage.bossBgImage.width : canvas.width;
+            bossBgWidth = Math.max(canvas.width, bossBgWidth);
+
+            let pCam = cameraX;
+            let slideIn = 0;
+            if (gameState === 'BOSS_TRANSITION') {
+                pCam = activeStage.bossDistance;
+                slideIn = cameraX - activeStage.bossDistance;
+            } else if (gameState === 'BOSS_FIGHT' || gameState === 'STAGE_TRANSITION' || gameState === 'GAME_CLEAR') {
+                pCam = activeStage.bossDistance;
+                slideIn = bossBgWidth;
+            }
+
+            if (activeStage.hasProceduralSky) {
+                ctx.fillStyle = "#1a0f2e";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Draw Parallax Stars
+                stars.forEach(s => {
+                    let drawX = (s.x - cameraX * activeStage.parallaxSpeed) % canvas.width;
+                    if (drawX < 0) drawX += canvas.width;
+                    ctx.fillStyle = s.color;
+                    ctx.fillRect(Math.floor(drawX), Math.floor(s.y), s.size, s.size);
+                });
+
+                // Draw Chunky Moon
+                let moonX = (120 - cameraX * (activeStage.parallaxSpeed * 0.25)) % 400; // Slower than stars
+                if (moonX < -32) moonX += 400;
+                ctx.fillStyle = "#e0e0e0";
+                const moonPixels = [
+                    "  XXXX  ",
+                    " XXXXXX ",
+                    "XX    XX",
+                    "XX      ",
+                    "XX      ",
+                    "XX      ",
+                    "XX    XX",
+                    " XXXXXX ",
+                    "  XXXX  "
+                ];
+                for (let r = 0; r < moonPixels.length; r++) {
+                    for (let c = 0; c < moonPixels[r].length; c++) {
+                        if (moonPixels[r][c] === 'X') {
+                            ctx.fillRect(Math.floor(moonX) + c * 2, 16 + r * 2, 2, 2);
+                        }
+                    }
+                }
+            } else if (activeStage.bgImage) {
+                ctx.fillStyle = "#111111"; // Base dark color for stage 2
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                if (activeStage.bgImage.complete && activeStage.bgImage.naturalHeight !== 0) {
+                    let bgScrollX = (pCam * activeStage.parallaxSpeed) % activeStage.bgImage.width;
+                    let baseX = Math.floor(-bgScrollX) - Math.floor(slideIn);
+                    ctx.drawImage(activeStage.bgImage, baseX, 0);
+                    ctx.drawImage(activeStage.bgImage, baseX + activeStage.bgImage.width, 0);
+                    ctx.drawImage(activeStage.bgImage, baseX + activeStage.bgImage.width * 2, 0);
+                }
+            }
+
+            if (activeStage.tileset && activeStage.tileset.complete && activeStage.tileset.naturalHeight !== 0) {
+                const tileSize = 16;
+
+                const colsToDraw = Math.ceil(canvas.width / tileSize) + 1;
+                const rowsToDraw = Math.ceil(canvas.height / tileSize);
+
+                const startCol = Math.floor(cameraX / tileSize);
+                const offsetX = Math.floor(cameraX) % tileSize;
+
+                let isBossState = (gameState === 'BOSS_TRANSITION' || gameState === 'BOSS_FIGHT' || gameState === 'STAGE_TRANSITION');
+                let shouldDrawTiles = !(activeStage.hideTilesDuringBoss && isBossState);
+
+                if (shouldDrawTiles && activeStage.foregroundMap && activeStage.foregroundMap.length > 0) {
+                    for (let row = 0; row < rowsToDraw && row < activeStage.foregroundMap.length; row++) {
+                        for (let c = 0; c < colsToDraw; c++) {
+                            const mapCol = (startCol + c) % activeStage.foregroundMap[0].length;
+                            const tileVal = activeStage.foregroundMap[row][mapCol];
+                            if (tileVal === 0) continue;
+
+                            const tCol = tileMapDefs[tileVal][0];
+                            const tRow = tileMapDefs[tileVal][1];
+                            
+                            // Slicing math accounting for 1px margins between tiles
+                            const sx = tCol * (16 + 1);
+                            const sy = tRow * (16 + 1);
+
+                            const drawX = (c * tileSize) - offsetX;
+                            let drawY = row * tileSize;
+
+                            if (tileVal >= 3 && tileVal <= 6) {
+                                drawY += 8; // Scenery overlap
+                            }
+
+                            ctx.drawImage(
+                                activeStage.tileset, 
+                                Math.floor(sx), Math.floor(sy), Math.floor(16), Math.floor(16), 
+                                Math.floor(drawX), Math.floor(drawY), Math.floor(16), Math.floor(16)
+                            );
+                        }
+                    }
+                }
+            }
+
+            // Boss Arena Background sliding / locked
+            if (gameState === 'BOSS_TRANSITION' && activeStage.bossBgImage) {
+                if (activeStage.bossBgImage.complete && activeStage.bossBgImage.naturalHeight !== 0) {
+                    ctx.drawImage(activeStage.bossBgImage, Math.floor(canvas.width - slideIn), 0);
+                }
+            } else if ((gameState === 'BOSS_FIGHT' || gameState === 'STAGE_TRANSITION' || gameState === 'GAME_CLEAR') && activeStage.bossBgImage) {
+                if (activeStage.bossBgImage.complete && activeStage.bossBgImage.naturalHeight !== 0) {
+                    ctx.drawImage(activeStage.bossBgImage, Math.floor(canvas.width - bossBgWidth), 0);
+                }
+            }
+        }
+
+        function update() {
+            if (gameState !== 'PLAYING' && gameState !== 'BOSS_FIGHT' && gameState !== 'BOSS_TRANSITION') {
+                return;
+            }
+
+            let activeStage = stageConfigs[currentStage - 1];
+
+            if (gameState === 'PLAYING') {
+                cameraX++; // Infinite scroll left
+
+                if (cameraX >= activeStage.bossDistance) {
+                    gameState = 'BOSS_TRANSITION';
+                    boss.active = true;
+                    boss.maxHP = 50 + (currentStage * 25);
+                    boss.hp = boss.maxHP;
+                }
+            } else if (gameState === 'BOSS_TRANSITION') {
+                cameraX++;
+                let bossBgWidth = activeStage.bossBgImage.width || canvas.width;
+                bossBgWidth = Math.max(canvas.width, bossBgWidth);
+
+                let slideIn = cameraX - activeStage.bossDistance;
+                boss.x = (canvas.width - slideIn) + (bossBgWidth - boss.width - 10);
+
+                if (slideIn >= bossBgWidth) {
+                    gameState = 'BOSS_FIGHT';
+                    boss.shootTimer = 0;
+                    boss.x = canvas.width - boss.width - 10;
+                }
+            } else if (gameState === 'BOSS_FIGHT') {
+                boss.update();
+
+                if (boss.hp <= 0) {
+                    score += 5000;
+                    if (currentStage < stageConfigs.length) {
+                        gameState = 'STAGE_TRANSITION';
+                        boss.active = false;
+                        bullets.length = 0;
+                        bossBullets.length = 0;
+                        enemies.length = 0;
+                        crystals.length = 0;
+                        return;
+                    } else {
+                        gameState = 'GAME_CLEAR';
+                        boss.active = false;
+                        return;
+                    }
+                }
+            }
+
+            if (mitzi.iFrames > 0) mitzi.iFrames--;
+
+            if (!mitzi.dead) {
+                // Movement
+                if (keys[keyMap.up] && mitzi.y > 0) mitzi.y -= mitzi.speed;
+                if (keys[keyMap.down] && mitzi.y < canvas.height - mitzi.height) mitzi.y += mitzi.speed;
+                if (keys[keyMap.left] && mitzi.x > 0) mitzi.x -= mitzi.speed;
+                if (keys[keyMap.right] && mitzi.x < canvas.width / 2) mitzi.x += mitzi.speed;
+
+                // Shooting
+                if (keys[keyMap.shoot] && mitzi.cooldown <= 0) {
+                    bullets.push({ 
+                        x: mitzi.x + 32, y: mitzi.y + 15, width: 4, height: 2, 
+                        speed: 4, type: mitzi.magic 
+                    });
+                    mitzi.cooldown = 8;
+                }
+            }
+            if (mitzi.cooldown > 0) mitzi.cooldown--;
+
+            // Update Bullets
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.x += b.speed;
+                
+                if (b.type === 'homing') {
+                    let closest = null, minDist = Infinity;
+                    for (let e of enemies) {
+                        let dist = Math.hypot(e.x - b.x, e.y - b.y);
+                        if (dist < minDist) { minDist = dist; closest = e; }
+                    }
+                    if (closest) {
+                        if (b.y < closest.y + closest.height / 2) b.y += 0.75;
+                        if (b.y > closest.y + closest.height / 2) b.y -= 0.75;
+                    }
+                }
+
+                // Check collision with boss
+                if (boss.active && checkCollision(b, boss)) {
+                    boss.hp -= 1; // Or some damage value
+                    bullets.splice(i, 1);
+                    continue;
+                }
+
+                if (b.x > canvas.width) {
+                    bullets.splice(i, 1);
+                    continue;
+                }
+
+                let bulletRemoved = false;
+
+                // Crystal Collision
+                for (let c = crystals.length - 1; c >= 0; c--) {
+                    if (checkCollision(b, crystals[c])) {
+                        crystals[c].dy = -2.5;
+                        crystals[c].dx += 0.5;
+                        crystals[c].colorIndex = (crystals[c].colorIndex + 1) % magicColors.length;
+                        
+                        if (b.type !== 'piercing') {
+                            bullets.splice(i, 1);
+                            bulletRemoved = true;
+                        }
+                        break;
+                    }
+                }
+                if (bulletRemoved) continue;
+
+                // Enemy Collision
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    if (checkCollision(b, enemies[j])) {
+                        let e = enemies[j];
+                        enemies.splice(j, 1);
+                        score += 100;
+                        
+                        // 30% crystal drop rate
+                        if (Math.random() < 0.3) {
+                            crystals.push({
+                                x: e.x, y: e.y, width: 8, height: 8,
+                                dx: -0.5, dy: -1.5, colorIndex: 0
+                            });
+                        }
+                        
+                        if (b.type !== 'piercing') {
+                            bullets.splice(i, 1);
+                            bulletRemoved = true;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Update Boss Bullets
+            for (let i = bossBullets.length - 1; i >= 0; i--) {
+                let b = bossBullets[i];
+                b.x += (b.dx !== undefined ? b.dx : -b.speed);
+                b.y += b.dy;
+
+                if (!mitzi.dead && checkCollision(getMitziHitbox(), b)) {
+                    if (mitzi.iFrames === 0) {
+                        if (!godMode) mitzi.hp--;
+                        mitzi.iFrames = 60;
+                        if (mitzi.hp <= 0) {
+                            mitzi.dead = true;
+                            gameState = 'GAME_OVER';
+                        }
+                    }
+                    bossBullets.splice(i, 1);
+                    continue;
+                }
+
+                if (b.x < -10 || b.x > canvas.width + 10 || b.y < -10 || b.y > canvas.height + 10) {
+                    bossBullets.splice(i, 1);
+                    continue;
+                }
+            }
+
+            // Update Crystals
+            for (let i = crystals.length - 1; i >= 0; i--) {
+                let c = crystals[i];
+                c.x += c.dx;
+                c.y += c.dy;
+                c.dy += 0.1; // gravity
+                
+                if (c.y > canvas.height - 8) {
+                    c.y = canvas.height - 8;
+                    c.dy = -1.5;
+                    c.dx *= 0.95;
+                }
+                
+                if (c.x < -8 || c.x > canvas.width) {
+                    crystals.splice(i, 1);
+                    continue;
+                }
+                
+                // Player Collect
+                if (!mitzi.dead && checkCollision(getMitziHitbox(), c)) {
+                    let colorKey = magicColors[c.colorIndex];
+                    if (colorKey === 2) mitzi.magic = 'homing';
+                    else if (colorKey === 4) mitzi.magic = 'piercing';
+                    crystals.splice(i, 1);
+                    score += 500;
+                }
+            }
+
+            // Spawn Enemies
+            if (frameCount % 90 === 0) {
+                enemies.push({ x: 160, y: Math.random() * 130 + 10, width: 8, height: 8, speed: 1.5 });
+            }
+
+            // Update Enemies & Player Collision
+            let mBox = getMitziHitbox();
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                enemies[i].x -= enemies[i].speed;
+                
+                if (!mitzi.dead && checkCollision(mBox, enemies[i])) {
+                    if (mitzi.iFrames === 0) {
+                        if (!godMode) mitzi.hp--;
+                        mitzi.iFrames = 60;
+                        if (mitzi.hp <= 0) {
+                            mitzi.dead = true;
+                            gameState = 'GAME_OVER';
+                        }
+                    }
+                }
+
+                if (enemies[i].x < -8) enemies.splice(i, 1);
+            }
+
+            // Check Boss Body Collision
+            if (!mitzi.dead && boss.active && checkCollision(mBox, boss)) {
+                if (mitzi.iFrames === 0) {
+                    if (!godMode) mitzi.hp--;
+                    mitzi.iFrames = 60;
+                    if (mitzi.hp <= 0) {
+                        mitzi.dead = true;
+                        gameState = 'GAME_OVER';
+                    }
+                }
+            }
+
+            frameCount++;
+        }
+
+        function draw() {
+            const hudUi = document.getElementById('hud-ui');
+            const hudScore = document.getElementById('hud-score');
+            const messageUi = document.getElementById('message-ui');
+            const messageTitle = document.getElementById('message-title');
+            const messageSub = document.getElementById('message-sub');
+
+            if (gameState === 'START_MENU') {
+                if (hudUi && hudUi.style) hudUi.style.display = 'none';
+                if (messageUi && messageUi.style) messageUi.style.display = 'none';
+            } else if (gameState === 'PLAYING' || gameState === 'BOSS_TRANSITION' || gameState === 'BOSS_FIGHT') {
+                if (hudUi && hudUi.style) hudUi.style.display = 'block';
+                if (hudScore) hudScore.innerText = "SCORE: " + score;
+                if (messageUi && messageUi.style) messageUi.style.display = 'none';
+            } else if (gameState === 'STAGE_TRANSITION') {
+                if (messageUi && messageUi.style) messageUi.style.display = 'flex';
+                if (messageTitle) messageTitle.innerText = "STAGE " + currentStage + " CLEAR";
+                if (messageSub) messageSub.innerText = "PRESS [" + formatKeyName(keyMap.shoot).toUpperCase() + "] TO CONTINUE";
+                if (hudUi && hudUi.style) hudUi.style.display = 'none';
+            } else if (gameState === 'GAME_OVER' || gameState === 'GAME_CLEAR') {
+                if (messageUi && messageUi.style) messageUi.style.display = 'flex';
+                if (messageTitle) messageTitle.innerText = gameState === 'GAME_OVER' ? "GAME OVER" : "MISSION ACCOMPLISHED";
+                if (messageSub) messageSub.innerText = "PRESS [" + formatKeyName(keyMap.shoot).toUpperCase() + "] TO RESTART";
+                if (hudUi && hudUi.style) hudUi.style.display = 'none';
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawBackground();
+
+            if (gameState === 'START_MENU') {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            // Draw Bullets
+            bullets.forEach(b => {
+                if (b.type === 'piercing') ctx.fillStyle = palette[4]; // Yellow
+                else if (b.type === 'homing') ctx.fillStyle = palette[2]; // Pink
+                else ctx.fillStyle = palette[3]; // White default
+
+                ctx.fillRect(Math.floor(b.x), Math.floor(b.y), b.width, b.height);
+            });
+
+            // Draw Boss Bullets
+            ctx.fillStyle = palette[4];
+            bossBullets.forEach(b => {
+                ctx.fillRect(Math.floor(b.x), Math.floor(b.y), 4, 4);
+            });
+
+            // Draw Entities
+            crystals.forEach(c => {
+                let colorKey = magicColors[c.colorIndex];
+                drawSprite(c.x, c.y, crystalPixels, { 2: colorKey });
+            });
+
+            enemies.forEach(e => drawSprite(e.x, e.y, lagSpikePixels));
+            
+            if (boss.active) {
+                boss.draw();
+            }
+
+            if (gameState === 'BOSS_FIGHT') {
+                // Draw Boss HP bar
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(Math.floor(canvas.width / 2 - 40), 5, 80, 6);
+                ctx.fillStyle = '#ff0044';
+                ctx.fillRect(Math.floor(canvas.width / 2 - 39), 6, Math.floor(78 * (Math.max(0, boss.hp) / boss.maxHP)), 4);
+            }
+
+            if (!mitzi.dead && (mitzi.iFrames === 0 || Math.floor(frameCount / 4) % 2 === 0)) {
+                if (mitziImg.complete && mitziImg.naturalHeight !== 0) {
+                    ctx.drawImage(mitziImg, 0, 0, 32, 32, Math.floor(mitzi.x), Math.floor(mitzi.y), 32, 32);
+                }
+            }
+
+            // Draw Health HUD (Native pixel blocks render crisp on canvas)
+            for (let index = 0; index < mitzi.maxHP; index++) {
+                ctx.fillStyle = index < mitzi.hp ? "#ff0077" : "#333333";
+                ctx.fillRect(4 + (index * 8), 16, 6, 6);
+            }
+
+            if (gameState === 'STAGE_TRANSITION') {
+                ctx.fillStyle = "#111111";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+        }
+
+        // Wire Menu Buttons
+        const btnStart = document.getElementById("btn-start");
+        if (btnStart && btnStart.addEventListener) {
+            btnStart.addEventListener("click", () => {
+                const menu = document.getElementById("main-menu-ui");
+                if (menu) menu.style.display = "none";
+                gameState = "PLAYING";
+            });
+        }
+
+        const btnSettings = document.getElementById("btn-settings");
+        if (btnSettings && btnSettings.addEventListener) {
+            btnSettings.addEventListener("click", () => {
+                const settings = document.getElementById("settings-ui");
+                if (settings) settings.style.display = "block";
+            });
+        }
+
+        const btnCloseSettings = document.getElementById("btn-close-settings");
+        if (btnCloseSettings && btnCloseSettings.addEventListener) {
+            btnCloseSettings.addEventListener("click", () => {
+                const settings = document.getElementById("settings-ui");
+                if (settings) settings.style.display = "none";
+                if (rebindingAction) {
+                    rebindingAction = null;
+                    updateRebindButtons();
+                }
+            });
+        }
+
+        const devModeToggle = document.getElementById("dev-mode-toggle");
+        if (devModeToggle && devModeToggle.addEventListener) {
+            devModeToggle.addEventListener("change", (e) => {
+                devMode = e.target.checked;
+            });
+        }
+
+        function initKeyBindings() {
+            updateRebindButtons();
+            const actions = ['up', 'down', 'left', 'right', 'shoot'];
+            actions.forEach(action => {
+                const btn = document.getElementById(`btn-bind-${action}`);
+                if (btn && btn.addEventListener) {
+                    btn.addEventListener("click", () => {
+                        rebindingAction = action;
+                        updateRebindButtons();
+                        btn.innerText = "PRESS KEY";
+                        if (btn.classList && btn.classList.add) {
+                            btn.classList.add('active');
+                        }
+                    });
+                }
+            });
+        }
+        initKeyBindings();
+
+        gameLoop();
+    </script>
+
+    <!-- Menu Background Particle Generator -->
+    <script>
+        const menuFx = document.getElementById('menu-fx');
+        if (menuFx) {
+            // 12 drifting clouds
+            for (let i = 0; i < 12; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                const width = Math.floor(Math.random() * 120 + 80);
+                const height = Math.floor(width * 0.45);
+                cloud.style.width = width + 'px';
+                cloud.style.height = height + 'px';
+                cloud.style.top = (Math.random() * 80) + '%';
+                cloud.style.animationDuration = (Math.random() * 15 + 10).toFixed(1) + 's';
+                cloud.style.animationDelay = '-' + (Math.random() * 10).toFixed(1) + 's';
+                menuFx.appendChild(cloud);
+            }
+
+            // 40 falling fish with whimsical rotation and opposing directions
+            const variants = ['fish-right', 'fish-left', 'fish-wiggle-right', 'fish-wiggle-left'];
+            for (let i = 0; i < 40; i++) {
+                const fish = document.createElement('div');
+                const variant = variants[Math.floor(Math.random() * variants.length)];
+                fish.className = 'fish ' + variant;
+                const w = Math.floor(Math.random() * 6 + 10);
+                fish.style.width = w + 'px';
+                fish.style.height = Math.floor(w * 0.6) + 'px';
+                fish.style.left = (Math.random() * 100) + '%';
+                fish.style.animationDuration = (Math.random() * 5 + 4).toFixed(1) + 's';
+                fish.style.animationDelay = '-' + (Math.random() * 7).toFixed(1) + 's';
+                menuFx.appendChild(fish);
+            }
+        }
+    </script>
+</body>
+
+</html>
