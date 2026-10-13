@@ -1733,18 +1733,31 @@
             for (let i = crystals.length - 1; i >= 0; i--) {
                 let c = crystals[i];
 
-                // Point of Collection: Risk pushing to the right side (x > 110) to vacuum items
-                if (!mitzi.dead && mitzi.x > 110) {
+                let targetWorldX = cameraX + mitzi.x + 16;
+                let targetWorldY = mitzi.y + 16; // mitzi.y is already in world coordinates
+                let crystalCenterX = c.x + (c.width / 2);
+                let crystalCenterY = c.y + (c.height / 2);
+                let toTargetX = targetWorldX - crystalCenterX;
+                let toTargetY = targetWorldY - crystalCenterY;
+                let distToMitzi = Math.hypot(toTargetX, toTargetY);
+
+                // Point of Collection: Risk pushing forward past mid-screen (x >= 70) to vacuum all items
+                if (!mitzi.dead && mitzi.x >= 70) {
+                    c.magnetized = true;
+                }
+
+                // Proximity Magnet: Also vacuum items that get close to Mitzi (within 36px)
+                if (!mitzi.dead && distToMitzi < 36) {
                     c.magnetized = true;
                 }
 
                 if (c.magnetized) {
-                    // Fly rapidly toward Mitzi's center
-                    let targetWorldX = cameraX + mitzi.x + 16;
-                    let targetWorldY = cameraY + mitzi.y + 16;
-                    let angle = Math.atan2(targetWorldY - (c.y + c.height / 2), targetWorldX - (c.x + c.width / 2));
-                    c.dx = Math.cos(angle) * 5; 
-                    c.dy = Math.sin(angle) * 5;
+                    // Fly rapidly and powerfully toward Mitzi's center
+                    let pullSpeed = Math.max(8, Math.min(14, distToMitzi * 0.15 + 6));
+                    if (distToMitzi > 0.001) {
+                        c.dx = (toTargetX / distToMitzi) * pullSpeed;
+                        c.dy = (toTargetY / distToMitzi) * pullSpeed;
+                    }
                     c.x += c.dx;
                     c.y += c.dy;
                 } else {
@@ -1766,15 +1779,17 @@
                 let screenX = c.x - cameraX;
                 let screenY = c.y - cameraY;
 
-                // Off-screen cleanup (scrolled past left or too far right/down)
-                if (screenX < -16 || screenX > canvas.width + 64 || screenY > canvas.height + 64) {
+                // Off-screen cleanup: generous buffer so magnetized crystals are never lost mid-flight
+                let offLeft = c.magnetized ? -160 : -40;
+                if (screenX < offLeft || screenX > canvas.width + 64 || screenY > canvas.height + 64) {
                     crystals.splice(i, 1);
                     continue;
                 }
                 
-                // Player Collect
+                // Player Collect (AABB check or close proximity snap)
                 let crystalScreenBox = { x: screenX, y: screenY, width: c.width, height: c.height };
-                if (!mitzi.dead && checkCollision(getMitziItemHitbox(), crystalScreenBox)) {
+                let currentDist = Math.hypot(targetWorldX - (c.x + c.width / 2), targetWorldY - (c.y + c.height / 2));
+                if (!mitzi.dead && (checkCollision(getMitziItemHitbox(), crystalScreenBox) || currentDist < 16)) {
                     let colorKey = magicColors[c.colorIndex];
                     let magicType = (colorKey === 2) ? 'homing' : 'piercing';
                     mitzi.magic = magicType; 
@@ -1835,8 +1850,9 @@
                     e.y = e.startY + Math.sin((frameCount + i * 10) * 0.05) * 20;
                 } else if (e.type === 'tracker') {
                     // Slowly drift Y coordinate toward Mitzi
-                    if (e.y < mitzi.y) e.y += 0.4;
-                    if (e.y > mitzi.y) e.y -= 0.4;
+                    let mitziScreenY = mitzi.y - cameraY;
+                    if (e.y < mitziScreenY) e.y += 0.4;
+                    if (e.y > mitziScreenY) e.y -= 0.4;
                 } else if (e.type === 'ground') {
                     // Snap to the dynamic smooth floor terrain
                     let eWorldX = cameraX + e.x + (e.width / 2);
