@@ -941,8 +941,8 @@
             [0, 3, 3, 3, 3, 0]
         ];
 
-        // Change speed to 1 for authentic NGPC weight
-        const mitzi = { x: 20, y: 70, speed: 1, cooldown: 0, width: 32, height: 32, magic: null, dead: false, hp: 3, maxHP: 3, iFrames: 0, exp: 0, level: 1, magicStocks: [], chargeTimer: 0, satAngle: 0 };
+        // Change speed to 1 for authentic NGPC weight; height: 25 matches Mitzi's actual sprite feet level (rows 0-25)
+        const mitzi = { x: 20, y: 70, speed: 1, cooldown: 0, width: 32, height: 25, magic: null, dead: false, hp: 3, maxHP: 3, iFrames: 0, exp: 0, level: 1, magicStocks: [], chargeTimer: 0, satAngle: 0 };
         const bullets = [];
         const bossBullets = [];
         const enemies = [];
@@ -1350,8 +1350,8 @@
         }
 
         function getMitziItemHitbox() {
-            // 24x24 hitbox so players don't have to perfectly align the center pixel to grab a medal
-            return { x: mitzi.x + 4, y: Math.floor(mitzi.y - cameraY) + 4, width: 24, height: 24 };
+            // 24x26 hitbox so players don't have to perfectly align the center pixel to grab a medal, and covers items on the ground
+            return { x: mitzi.x + 4, y: Math.floor(mitzi.y - cameraY) + 4, width: 24, height: 26 };
         }
 
         // Strict integer sprite renderer
