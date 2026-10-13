@@ -12,7 +12,11 @@ A Neo Geo Pocket Color (NGPC) inspired side-scrolling arcade shooter featuring M
   - Stage 5: WiFi Maiden Shrine
   - Stage 6: Fortress
 - **Multi-Stage Mechanics**: Dynamic boss arena camera pans, seamless parallax stitching, stage transitions, and custom foreground tilemaps.
-- **Player & Combat Systems**: 3-HP health system with invincibility frames (i-frames), magic projectile types (homing, piercing), and customizable keybindings saved to localStorage.
+- **Authentic Combat & Progression (Cotton Inspired)**:
+  - **EXP Weapon Leveling**: Crystals grant EXP (up to Level 3) upgrading shots from single, to parallel double, to angled 3-way spread. Taking damage penalizes EXP.
+  - **Point of Collection (PoC)**: Aggressive forward positioning (pushing past right threshold) magnetizes and vacuums dropped crystals across the screen.
+  - **Dynamic Enemy Behaviors**: Archetypes include linear fliers, sinusoidal wave bobbers, vertical tracking hunters, and ground terrain crawlers.
+  - **Player & Health Systems**: Deliberate retro movement weight, 3-HP health bar with i-frames, elemental magic shots (homing pink, piercing yellow), and keybindings saved to localStorage.
 - **Developer Controls**: Skip to boss / kill boss and toggle god mode for rapid stage testing.
 
 ## How to Play
