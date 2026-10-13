@@ -941,8 +941,8 @@
             [0, 3, 3, 3, 3, 0]
         ];
 
-        // Change speed to 1 for authentic NGPC weight; height: 25 matches Mitzi's actual sprite feet level (rows 0-25)
-        const mitzi = { x: 20, y: 70, speed: 1, cooldown: 0, width: 32, height: 25, magic: null, dead: false, hp: 3, maxHP: 3, iFrames: 0, exp: 0, level: 1, magicStocks: [], chargeTimer: 0, satAngle: 0 };
+        // Change speed to 1 for authentic NGPC weight; height: 23 lets Mitzi's paws (rows 24-25) land directly on and subtly overlap (1-2px) the terrain surface
+        const mitzi = { x: 20, y: 70, speed: 1, cooldown: 0, width: 32, height: 23, magic: null, dead: false, hp: 3, maxHP: 3, iFrames: 0, exp: 0, level: 1, magicStocks: [], chargeTimer: 0, satAngle: 0 };
         const bullets = [];
         const bossBullets = [];
         const enemies = [];
@@ -1133,12 +1133,12 @@
         ];
 
         const stageConfigs = [
-            { mapHeight: 304, hasProceduralSky: false, bgImagePath: './stage1_bg.png', bgImage: stage1Img, parallaxSpeed: 0.2, bossDistance: 5000, bossBgImage: bossBg1, tileset: tilesetImg, foregroundMap: mapStage1, hideTilesDuringBoss: false },
-            { mapHeight: 152, hasProceduralSky: false, bgImagePath: './bamboo_bg.png', bgImage: bambooImg, parallaxSpeed: 0.3, bossDistance: 5000, bossBgImage: bossBg2, tileset: tilesetImg, foregroundMap: mapStage2, hideTilesDuringBoss: false },
-            { mapHeight: 152, hasProceduralSky: false, bgImagePath: './city_bg.png', bgImage: cityImg, parallaxSpeed: 0.25, bossDistance: 5000, bossBgImage: bossBg3, tileset: tilesetImg, foregroundMap: mapStage3, hideTilesDuringBoss: false },
-            { mapHeight: 152, hasProceduralSky: false, bgImagePath: './retropub_bg.png', bgImage: pubImg, parallaxSpeed: 0.35, bossDistance: 5000, bossBgImage: bossBg4, tileset: tilesetImg, foregroundMap: mapStage4, hideTilesDuringBoss: false },
-            { mapHeight: 152, hasProceduralSky: false, bgImagePath: './wifi_maiden_bg.png', bgImage: wifiImg, parallaxSpeed: 0.3, bossDistance: 5000, bossBgImage: bossBg5, tileset: tilesetImg, foregroundMap: mapStage5, hideTilesDuringBoss: false },
-            { mapHeight: 152, hasProceduralSky: false, bgImagePath: './fortress_bg.png', bgImage: fortressImg, parallaxSpeed: 0.4, bossDistance: 5000, bossBgImage: bossBg6, tileset: tilesetImg, foregroundMap: mapStage6, hideTilesDuringBoss: false }
+            { mapHeight: 304, surfaceOffset: 6, hasProceduralSky: false, bgImagePath: './stage1_bg.png', bgImage: stage1Img, parallaxSpeed: 0.2, bossDistance: 5000, bossBgImage: bossBg1, tileset: tilesetImg, foregroundMap: mapStage1, hideTilesDuringBoss: false },
+            { mapHeight: 152, surfaceOffset: 2, hasProceduralSky: false, bgImagePath: './bamboo_bg.png', bgImage: bambooImg, parallaxSpeed: 0.3, bossDistance: 5000, bossBgImage: bossBg2, tileset: tilesetImg, foregroundMap: mapStage2, hideTilesDuringBoss: false },
+            { mapHeight: 152, surfaceOffset: 1, hasProceduralSky: false, bgImagePath: './city_bg.png', bgImage: cityImg, parallaxSpeed: 0.25, bossDistance: 5000, bossBgImage: bossBg3, tileset: tilesetImg, foregroundMap: mapStage3, hideTilesDuringBoss: false },
+            { mapHeight: 152, surfaceOffset: 0, hasProceduralSky: false, bgImagePath: './retropub_bg.png', bgImage: pubImg, parallaxSpeed: 0.35, bossDistance: 5000, bossBgImage: bossBg4, tileset: tilesetImg, foregroundMap: mapStage4, hideTilesDuringBoss: false },
+            { mapHeight: 152, surfaceOffset: 1, hasProceduralSky: false, bgImagePath: './wifi_maiden_bg.png', bgImage: wifiImg, parallaxSpeed: 0.3, bossDistance: 5000, bossBgImage: bossBg5, tileset: tilesetImg, foregroundMap: mapStage5, hideTilesDuringBoss: false },
+            { mapHeight: 152, surfaceOffset: 0, hasProceduralSky: false, bgImagePath: './fortress_bg.png', bgImage: fortressImg, parallaxSpeed: 0.4, bossDistance: 5000, bossBgImage: bossBg6, tileset: tilesetImg, foregroundMap: mapStage6, hideTilesDuringBoss: false }
         ];
 
         let activeStage = stageConfigs[0];
@@ -1306,6 +1306,7 @@
             const col = Math.floor(worldX / tileSize);
             const localX = worldX % tileSize; 
             const map = activeStage.foregroundMap;
+            const surfaceOffset = (activeStage && activeStage.surfaceOffset !== undefined) ? activeStage.surfaceOffset : 0;
 
             let getColY = (c) => {
                 let checkCol = c;
@@ -1320,7 +1321,7 @@
                 for (let r = 0; r < map.length; r++) {
                     let v = map[r][checkCol];
                     // Solid ground IDs
-                    if (v === 1 || v === 2 || v >= 11) return r * tileSize;
+                    if (v === 1 || v === 2 || v >= 11) return r * tileSize + surfaceOffset;
                 }
                 return defaultFloor;
             };
