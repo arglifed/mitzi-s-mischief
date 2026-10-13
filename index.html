@@ -1183,9 +1183,9 @@
                             const startX = this.x;
                             const startY = this.y + this.height / 2;
                             bossBullets.push(
-                                { x: startX, y: startY, width: 4, height: 4, speed: 3, dy: -1 },
-                                { x: startX, y: startY, width: 4, height: 4, speed: 3, dy: 0 },
-                                { x: startX, y: startY, width: 4, height: 4, speed: 3, dy: 1 }
+                                { x: startX, y: startY, width: 4, height: 4, speed: 3, dy: -1, shape: 'rice', colorBase: '#ff006e' },
+                                { x: startX, y: startY, width: 4, height: 4, speed: 3, dy: 0, shape: 'rice', colorBase: '#ff006e' },
+                                { x: startX, y: startY, width: 4, height: 4, speed: 3, dy: 1, shape: 'rice', colorBase: '#ff006e' }
                             );
                             this.shootTimer = 0;
                         }
@@ -1199,9 +1199,9 @@
                         if (this.shootTimer >= 120) {
                             const startY = this.y + this.height / 2;
                             bossBullets.push(
-                                { x: this.x, y: startY, width: 4, height: 4, speed: 4.5, dy: 0 },
-                                { x: this.x + 15, y: startY, width: 4, height: 4, speed: 4.5, dy: 0 },
-                                { x: this.x + 30, y: startY, width: 4, height: 4, speed: 4.5, dy: 0 }
+                                { x: this.x, y: startY, width: 4, height: 4, speed: 4.5, dy: 0, shape: 'rice', colorBase: '#00f2ff' },
+                                { x: this.x + 15, y: startY, width: 4, height: 4, speed: 4.5, dy: 0, shape: 'rice', colorBase: '#00f2ff' },
+                                { x: this.x + 30, y: startY, width: 4, height: 4, speed: 4.5, dy: 0, shape: 'rice', colorBase: '#00f2ff' }
                             );
                             this.shootTimer = 0;
                         }
@@ -1224,7 +1224,9 @@
                                 width: 4,
                                 height: 4,
                                 speed: 3,
-                                dy: Math.sin(this.sweepAngle) * 2
+                                dy: Math.sin(this.sweepAngle) * 2,
+                                shape: 'orb',
+                                colorBase: '#ffca3a'
                             });
                             this.shootTimer = 0;
                         }
@@ -1239,10 +1241,10 @@
                             const startX = this.x;
                             const startY = this.y + this.height / 2;
                             bossBullets.push(
-                                { x: startX, y: startY, width: 4, height: 4, dx: -1.5, dy: -1.5 },
-                                { x: startX, y: startY, width: 4, height: 4, dx: -1.5, dy: 1.5 },
-                                { x: startX, y: startY, width: 4, height: 4, dx: -2.5, dy: 0 },
-                                { x: startX, y: startY, width: 4, height: 4, dx: -0.8, dy: 0 }
+                                { x: startX, y: startY, width: 4, height: 4, dx: -1.5, dy: -1.5, shape: 'orb', colorBase: '#ff003c' },
+                                { x: startX, y: startY, width: 4, height: 4, dx: -1.5, dy: 1.5, shape: 'orb', colorBase: '#ff003c' },
+                                { x: startX, y: startY, width: 4, height: 4, dx: -2.5, dy: 0, shape: 'orb', colorBase: '#ff003c' },
+                                { x: startX, y: startY, width: 4, height: 4, dx: -0.8, dy: 0, shape: 'orb', colorBase: '#ff003c' }
                             );
                             this.shootTimer = 0;
                         }
@@ -1261,7 +1263,7 @@
                             const startX = this.x;
                             const startY = this.y + this.height / 2;
                             [-2, -1, 0, 1, 2].forEach(dy => {
-                                bossBullets.push({ x: startX, y: startY, width: 4, height: 4, speed: 4, dy: dy });
+                                bossBullets.push({ x: startX, y: startY, width: 4, height: 4, speed: 4, dy: dy, shape: 'amulet', colorBase: '#00f2ff' });
                             });
                             this.shootTimer = 0;
                         }
@@ -1279,7 +1281,7 @@
                             const startY = this.y + this.height / 2;
                             const dx = -2 - Math.cos(this.rot) * 2;
                             const dy = Math.sin(this.rot) * 2;
-                            bossBullets.push({ x: startX, y: startY, width: 4, height: 4, dx: dx, dy: dy });
+                            bossBullets.push({ x: startX, y: startY, width: 4, height: 4, dx: dx, dy: dy, shape: 'rice', colorBase: '#ff006e' });
                             this.shootTimer = 0;
                         }
                         break;
@@ -1369,6 +1371,73 @@
                     }
                 }
             }
+        }
+
+        // Clean enemy bullet renderer inspired by WiFi Maiden (orb, rice, and amulet styles)
+        function drawEnemyBullet(ctx, b) {
+            let cx = b.x + (b.width ? b.width / 2 : 2);
+            let cy = b.y + (b.height ? b.height / 2 : 2);
+            let vx = (b.dx !== undefined ? b.dx : -b.speed);
+            let vy = (b.dy !== undefined ? b.dy : 0);
+            let angle = (b.angle !== undefined) ? b.angle : Math.atan2(vy, vx);
+            let shape = b.shape || (Math.abs(vy) > 0.4 || Math.abs(vx) > 2.8 ? 'rice' : 'orb');
+            let colorBase = b.colorBase || b.color || '#ff006e';
+
+            if (ctx.save) ctx.save();
+            if (ctx.translate) ctx.translate(cx, cy);
+            if (ctx.rotate) ctx.rotate(angle);
+
+            if (shape === 'orb') {
+                if (ctx.createRadialGradient) {
+                    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 3.5);
+                    grad.addColorStop(0, '#ffffff');
+                    grad.addColorStop(0.35, '#ffffff');
+                    grad.addColorStop(1, colorBase);
+                    ctx.fillStyle = grad;
+                } else {
+                    ctx.fillStyle = colorBase;
+                }
+                if (ctx.beginPath && ctx.arc) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(-2, -2, 4, 4);
+                }
+            } else if (shape === 'rice') {
+                if (ctx.ellipse) {
+                    if (ctx.createRadialGradient) {
+                        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 4.5);
+                        grad.addColorStop(0, '#ffffff');
+                        grad.addColorStop(0.3, colorBase);
+                        grad.addColorStop(1, colorBase);
+                        ctx.fillStyle = grad;
+                    } else {
+                        ctx.fillStyle = colorBase;
+                    }
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 4.5, 2.2, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 2.2, 1.1, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = colorBase;
+                    ctx.fillRect(-3, -1.5, 6, 3);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(-1.5, -0.75, 3, 1.5);
+                }
+            } else if (shape === 'amulet') {
+                ctx.fillStyle = colorBase;
+                ctx.fillRect(-3.5, -2.5, 7, 5);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                if (ctx.strokeRect) ctx.strokeRect(-2.5, -1.5, 5, 3);
+            }
+
+            if (ctx.restore) ctx.restore();
         }
 
         function drawBackground() {
@@ -1982,7 +2051,7 @@
                         let eCenterY = e.y + 4;
 
                         if (e.type === 'linear') {
-                            // Aimed shot toward Mitzi's position
+                            // Aimed shot toward Mitzi's position (golden orb)
                             let angle = Math.atan2(mitziScreenY - eCenterY, mitziScreenX - eCenterX);
                             bossBullets.push({
                                 x: eCenterX - 2,
@@ -1991,12 +2060,13 @@
                                 height: 4,
                                 dx: Math.cos(angle) * 2.0,
                                 dy: Math.sin(angle) * 2.0,
-                                color: palette[4]
+                                shape: 'orb',
+                                colorBase: '#ffca3a'
                             });
                             e.shotsLeft--;
                             e.shootCooldown = 90;
                         } else if (e.type === 'tracker') {
-                            // Straight forward shot when vertically lined up with Mitzi
+                            // Straight forward shot when vertically lined up with Mitzi (hot-pink needle)
                             if (Math.abs(eCenterY - mitziScreenY) < 22) {
                                 bossBullets.push({
                                     x: eCenterX - 4,
@@ -2005,13 +2075,14 @@
                                     height: 4,
                                     dx: -2.4,
                                     dy: 0,
-                                    color: palette[2]
+                                    shape: 'rice',
+                                    colorBase: '#ff006e'
                                 });
                                 e.shotsLeft--;
                                 e.shootCooldown = 70;
                             }
                         } else if (e.type === 'wave') {
-                            // Angled downward/upward bullet
+                            // Angled downward/upward bullet (cyan needle)
                             let dy = (mitziScreenY > eCenterY) ? 0.7 : -0.7;
                             bossBullets.push({
                                 x: eCenterX - 2,
@@ -2020,12 +2091,13 @@
                                 height: 4,
                                 dx: -1.8,
                                 dy: dy,
-                                color: palette[4]
+                                shape: 'rice',
+                                colorBase: '#00f2ff'
                             });
                             e.shotsLeft--;
                             e.shootCooldown = 80;
                         } else if (e.type === 'ground') {
-                            // Lobbed mortar arcing into the air
+                            // Lobbed mortar arcing into the air (crimson orb)
                             bossBullets.push({
                                 x: eCenterX - 2,
                                 y: eCenterY - 4,
@@ -2034,7 +2106,8 @@
                                 dx: -1.2,
                                 dy: -2.3,
                                 gravity: 0.08,
-                                color: palette[2]
+                                shape: 'orb',
+                                colorBase: '#ff003c'
                             });
                             e.shotsLeft--;
                             e.shootCooldown = 90;
@@ -2193,7 +2266,9 @@
                 return;
             }
 
-            // Draw Bullets
+            // Draw Player Bullets (with clean opacity like WiFi Maiden)
+            if (ctx.save) ctx.save();
+            ctx.globalAlpha = 0.55;
             bullets.forEach(b => {
                 if (b.width > 10) { 
                     // Massive charge bomb laser
@@ -2214,19 +2289,11 @@
                     drawSprite(b.x, b.y, narutoPixels, swap);
                 }
             });
+            if (ctx.restore) ctx.restore();
 
-            // Draw Boss & Enemy Bullets (with white-hot glowing center for high readability)
+            // Draw Boss & Enemy Bullets (clean WiFi Maiden orb, rice, and amulet styles)
             bossBullets.forEach(b => {
-                let bx = Math.floor(b.x);
-                let by = Math.floor(b.y);
-                let w = b.width || 4;
-                let h = b.height || 4;
-                ctx.fillStyle = b.color || palette[4];
-                ctx.fillRect(bx, by, w, h);
-                if (w >= 4 && h >= 4) {
-                    ctx.fillStyle = "#ffffff";
-                    ctx.fillRect(bx + 1, by + 1, w - 2, h - 2);
-                }
+                drawEnemyBullet(ctx, b);
             });
 
             // Draw Entities

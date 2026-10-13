@@ -10,7 +10,18 @@ if (scriptMatch) {
           fillRect: () => {},
           clearRect: () => {},
           drawImage: () => {},
-          fillText: () => {}
+          fillText: () => {},
+          save: () => {},
+          restore: () => {},
+          translate: () => {},
+          rotate: () => {},
+          beginPath: () => {},
+          arc: () => {},
+          ellipse: () => {},
+          fill: () => {},
+          stroke: () => {},
+          strokeRect: () => {},
+          createRadialGradient: () => ({ addColorStop: () => {} })
         }),
         width: 160,
         height: 152
