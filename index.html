@@ -517,6 +517,8 @@
             mitzi.iFrames = 0;
             mitzi.magic = null;
             mitzi.cooldown = 0;
+            mitzi.exp = 0;
+            mitzi.level = 1;
             transitionTimer = 0;
             if (keyMap && keyMap.shoot) keys[keyMap.shoot] = false;
             keys[" "] = false;
@@ -541,7 +543,7 @@
         const palette = { 1: "#111111", 2: "#ff0077", 3: "#ffffff", 4: "#ffcc00" };
 
         // Change speed to 1 for authentic NGPC weight
-        const mitzi = { x: 20, y: 70, speed: 1, cooldown: 0, width: 32, height: 32, magic: null, dead: false, hp: 3, maxHP: 3, iFrames: 0 };
+        const mitzi = { x: 20, y: 70, speed: 1, cooldown: 0, width: 32, height: 32, magic: null, dead: false, hp: 3, maxHP: 3, iFrames: 0, exp: 0, level: 1 };
         const bullets = [];
         const bossBullets = [];
         const enemies = [];
@@ -1161,10 +1163,19 @@
 
                 // Shooting
                 if (keys[keyMap.shoot] && mitzi.cooldown <= 0) {
-                    bullets.push({ 
-                        x: mitzi.x + 32, y: Math.floor(mitzi.y - cameraY) + 15, width: 4, height: 2, 
-                        speed: 4, type: mitzi.magic 
-                    });
+                    let bx = mitzi.x + 32;
+                    let by = Math.floor(mitzi.y - cameraY) + 15;
+                    
+                    if (mitzi.level === 1) {
+                        bullets.push({ x: bx, y: by, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0 });
+                    } else if (mitzi.level === 2) {
+                        bullets.push({ x: bx, y: by - 4, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0 });
+                        bullets.push({ x: bx, y: by + 4, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0 });
+                    } else if (mitzi.level === 3) {
+                        bullets.push({ x: bx, y: by - 6, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: -0.5 });
+                        bullets.push({ x: bx, y: by, width: 6, height: 4, speed: 4, type: mitzi.magic, dy: 0 }); // Bigger center bullet
+                        bullets.push({ x: bx, y: by + 6, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0.5 });
+                    }
                     mitzi.cooldown = 8;
                 }
             }
@@ -1207,6 +1218,7 @@
             for (let i = bullets.length - 1; i >= 0; i--) {
                 let b = bullets[i];
                 b.x += b.speed;
+                b.y += (b.dy || 0);
                 
                 if (b.type === 'homing') {
                     let closest = null, minDist = Infinity;
@@ -1296,7 +1308,13 @@
 
                 if (!mitzi.dead && checkCollision(getMitziHitbox(), b)) {
                     if (mitzi.iFrames === 0) {
-                        if (!godMode) mitzi.hp--;
+                        if (!godMode) {
+                            mitzi.hp--;
+                            mitzi.exp = Math.max(0, mitzi.exp - 3);
+                            if (mitzi.exp >= 7) mitzi.level = 3;
+                            else if (mitzi.exp >= 3) mitzi.level = 2;
+                            else mitzi.level = 1;
+                        }
                         mitzi.iFrames = 60;
                         if (mitzi.hp <= 0) {
                             mitzi.dead = true;
@@ -1360,8 +1378,15 @@
                 let crystalScreenBox = { x: screenX, y: screenY, width: c.width, height: c.height };
                 if (!mitzi.dead && checkCollision(getMitziItemHitbox(), crystalScreenBox)) {
                     let colorKey = magicColors[c.colorIndex];
-                    if (colorKey === 2) mitzi.magic = 'homing';
-                    else if (colorKey === 4) mitzi.magic = 'piercing';
+                    mitzi.magic = (colorKey === 2) ? 'homing' : 'piercing';
+                    
+                    mitzi.exp += 1;
+                    if (mitzi.exp > 10) mitzi.exp = 10;
+                    
+                    if (mitzi.exp >= 7) mitzi.level = 3;
+                    else if (mitzi.exp >= 3) mitzi.level = 2;
+                    else mitzi.level = 1;
+
                     crystals.splice(i, 1);
                     score += 500;
                 }
@@ -1418,7 +1443,13 @@
                 
                 if (!mitzi.dead && checkCollision(mBox, e)) {
                     if (mitzi.iFrames === 0) {
-                        if (!godMode) mitzi.hp--;
+                        if (!godMode) {
+                            mitzi.hp--;
+                            mitzi.exp = Math.max(0, mitzi.exp - 3);
+                            if (mitzi.exp >= 7) mitzi.level = 3;
+                            else if (mitzi.exp >= 3) mitzi.level = 2;
+                            else mitzi.level = 1;
+                        }
                         mitzi.iFrames = 60;
                         if (mitzi.hp <= 0) {
                             mitzi.dead = true;
@@ -1433,7 +1464,13 @@
             // Check Boss Body Collision
             if (!mitzi.dead && boss.active && checkCollision(mBox, boss)) {
                 if (mitzi.iFrames === 0) {
-                    if (!godMode) mitzi.hp--;
+                    if (!godMode) {
+                        mitzi.hp--;
+                        mitzi.exp = Math.max(0, mitzi.exp - 3);
+                        if (mitzi.exp >= 7) mitzi.level = 3;
+                        else if (mitzi.exp >= 3) mitzi.level = 2;
+                        else mitzi.level = 1;
+                    }
                     mitzi.iFrames = 60;
                     if (mitzi.hp <= 0) {
                         mitzi.dead = true;
@@ -1529,6 +1566,15 @@
             for (let index = 0; index < mitzi.maxHP; index++) {
                 ctx.fillStyle = index < mitzi.hp ? "#ff0077" : "#333333";
                 ctx.fillRect(4 + (index * 8), 16, 6, 6);
+            }
+            
+            // Draw EXP HUD (Level 1: White, Level 2: Yellow, Level 3: Pink)
+            let expColor = "#ffffff";
+            if (mitzi.level === 2) expColor = "#ffcc00";
+            if (mitzi.level === 3) expColor = "#ff0077";
+            for (let index = 0; index < 10; index++) {
+                ctx.fillStyle = index < mitzi.exp ? expColor : "#333333";
+                ctx.fillRect(4 + (index * 4), 24, 3, 3);
             }
 
             if (gameState === 'STAGE_TRANSITION') {
