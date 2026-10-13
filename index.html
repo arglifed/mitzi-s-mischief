@@ -384,7 +384,10 @@
                     </div>
                 </div>
             </div>
-            <button id="btn-close-settings" class="menu-btn">CLOSE</button>
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 15px;">
+                <button id="btn-reset-binds" class="menu-btn" style="border-color: #ffcc00; color: #ffcc00; font-size: 15px; padding: 8px 18px;">RESET DEFAULTS</button>
+                <button id="btn-close-settings" class="menu-btn" style="font-size: 15px; padding: 8px 18px;">CLOSE</button>
+            </div>
         </div>
     </div>
     <p>Arrow Keys: Move | SPACE: Shoot</p>
@@ -394,12 +397,18 @@
         const ctx = canvas.getContext("2d");
         ctx.imageSmoothingEnabled = false;
 
-        let keyMap = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", shoot: " " };
+        const defaultKeyMap = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", shoot: " " };
+        let keyMap = { ...defaultKeyMap };
         try {
             if (typeof localStorage !== 'undefined') {
-                keyMap = JSON.parse(localStorage.getItem('mitziBinds')) || keyMap;
+                const saved = JSON.parse(localStorage.getItem('mitziBinds'));
+                if (saved && typeof saved === 'object') {
+                    keyMap = { ...defaultKeyMap, ...saved };
+                }
             }
-        } catch (e) {}
+        } catch (e) {
+            keyMap = { ...defaultKeyMap };
+        }
 
         let rebindingAction = null;
         const keys = {};
@@ -515,7 +524,7 @@
 
         // Mitzi Player Image
         const mitziImg = new Image();
-        mitziImg.src = "mitzi_player.png";
+        mitziImg.src = './mitzi_player.png';
 
         // Lag-Spike Enemy Sprite (8x8)
         const lagSpikePixels = [
@@ -554,13 +563,13 @@
         }
 
         const tilesetImg = new Image();
-        tilesetImg.src = "./tileset_legacy.png";
+        tilesetImg.src = './tileset_legacy.png';
 
         const stage1Img = new Image();
         stage1Img.src = './stage1_bg.png';
 
         const bambooImg = new Image();
-        bambooImg.src = "./bamboo_bg.png";
+        bambooImg.src = './bamboo_bg.png';
 
         const cityImg = new Image();
         cityImg.src = './city_bg.png';
@@ -1523,6 +1532,22 @@
                     rebindingAction = null;
                     updateRebindButtons();
                 }
+            });
+        }
+
+        const btnResetBinds = document.getElementById("btn-reset-binds");
+        if (btnResetBinds && btnResetBinds.addEventListener) {
+            btnResetBinds.addEventListener("click", () => {
+                keyMap = { ...defaultKeyMap };
+                try {
+                    if (typeof localStorage !== 'undefined') {
+                        localStorage.removeItem('mitziBinds');
+                    }
+                } catch (e) {}
+                if (rebindingAction) {
+                    rebindingAction = null;
+                }
+                updateRebindButtons();
             });
         }
 
