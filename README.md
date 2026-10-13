@@ -18,7 +18,9 @@ A Neo Geo Pocket Color (NGPC) inspired side-scrolling arcade shooter featuring M
   - **Magic Stocks & Charge Bombs**: Collecting crystals stores up to 3 elemental magic stocks. Holding shoot for 60 frames charges Mitzi with a flashing aura; releasing unleashes a screen-clearing bomb (Pink = 15-bullet Homing Swarm, Yellow = Giant Piercing Laser beam).
   - **Point of Collection (PoC)**: Aggressive forward positioning (pushing past right threshold) magnetizes and vacuums dropped crystals across the screen.
   - **Dynamic Enemy Behaviors**: Archetypes include linear fliers, sinusoidal wave bobbers, vertical tracking hunters, and ground terrain crawlers.
-  - **Player & Health Systems**: Deliberate retro movement weight, 3-HP health bar with i-frames, elemental magic shots (homing pink, piercing yellow), and keybindings saved to localStorage.
+- **Console Bezel HUD & Clean Playfield**:
+  - **Outer Bezel Status Display**: Score, Stage name, Life (glowing hearts), 10-pip EXP gauge, Magic Bomb slots, and Boss HP bar are housed in an authentic retro console bezel outside the playfield, leaving the 160x152 game screen 100% clean and unobstructed.
+  - **Refined Celestial Charge Aura**: Replaces solid flashing boxes with a constellation of 6 sparkling magical wisps orbiting Mitzi, gathering energy while holding shoot and activating radiant pulsing corner reticles upon reaching full bomb charge.
 - **Developer Controls**: Skip to boss / kill boss and toggle god mode for rapid stage testing.
 
 ## How to Play

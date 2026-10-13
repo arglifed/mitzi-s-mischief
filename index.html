@@ -16,19 +16,252 @@
             font-family: monospace;
         }
 
+        #bezel-casing {
+            display: inline-block;
+            background: linear-gradient(180deg, #1e1e26 0%, #111116 100%);
+            border: 3px solid #2d2d38;
+            border-radius: 14px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            padding: 10px 12px;
+            margin: 0 auto;
+            width: 640px;
+            box-sizing: content-box;
+            text-align: left;
+        }
+
+        #bezel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0c0c10;
+            border: 2px solid #22222a;
+            border-radius: 8px;
+            padding: 8px 16px;
+            margin-bottom: 8px;
+            font-family: 'DotGothic16', monospace;
+            box-sizing: border-box;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8);
+            position: relative;
+            min-height: 56px;
+        }
+
+        .bezel-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .bezel-panel-left {
+            align-items: flex-start;
+            min-width: 155px;
+        }
+
+        .bezel-panel-center {
+            align-items: center;
+            flex: 1;
+            gap: 4px;
+        }
+
+        .bezel-panel-right {
+            align-items: flex-end;
+            min-width: 155px;
+            gap: 4px;
+        }
+
+        .bezel-title {
+            font-size: 11px;
+            color: #777788;
+            letter-spacing: 1px;
+            line-height: 1;
+            font-weight: bold;
+        }
+
+        #bezel-score {
+            font-size: 22px;
+            color: #ffcc00;
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+            line-height: 1.1;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        #bezel-stage {
+            font-size: 11px;
+            color: #9cb8cc;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        .bezel-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #bezel-hearts {
+            display: flex;
+            gap: 6px;
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .bezel-heart {
+            color: #2b2b36;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .bezel-heart.active {
+            color: #ff0077;
+            text-shadow: 0 0 10px rgba(255, 0, 119, 0.9);
+        }
+
+        #bezel-exp-gauge {
+            display: flex;
+            gap: 3px;
+            background: #14141c;
+            padding: 3px 5px;
+            border-radius: 4px;
+            border: 1px solid #22222d;
+        }
+
+        .bezel-exp-pip {
+            width: 7px;
+            height: 9px;
+            background: #23232e;
+            border-radius: 1px;
+            transition: background-color 0.15s, box-shadow 0.15s;
+        }
+
+        .bezel-exp-pip.filled.lvl-1 {
+            background: #ffffff;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+        }
+
+        .bezel-exp-pip.filled.lvl-2 {
+            background: #ffcc00;
+            box-shadow: 0 0 5px rgba(255, 204, 0, 0.8);
+        }
+
+        .bezel-exp-pip.filled.lvl-3 {
+            background: #ff0077;
+            box-shadow: 0 0 5px rgba(255, 0, 119, 0.8);
+        }
+
+        #bezel-stocks {
+            display: flex;
+            gap: 6px;
+        }
+
+        .bezel-stock-slot {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            background: #171720;
+            border: 1px solid #2a2a38;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: #fff;
+            transition: all 0.2s;
+        }
+
+        .bezel-stock-slot.homing {
+            background: #ff0077;
+            border-color: #ff4499;
+            box-shadow: 0 0 10px rgba(255, 0, 119, 0.8);
+            color: #ffffff;
+        }
+
+        .bezel-stock-slot.piercing {
+            background: #ffcc00;
+            border-color: #ffee55;
+            color: #111111;
+            box-shadow: 0 0 10px rgba(255, 204, 0, 0.8);
+        }
+
+        #bezel-charge-status {
+            font-size: 10px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            background: #161620;
+            color: #666677;
+            border: 1px solid #262634;
+            letter-spacing: 1px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        #bezel-charge-status.ready {
+            background: #ff0077;
+            color: #ffffff;
+            border-color: #ff4499;
+            box-shadow: 0 0 12px rgba(255, 0, 119, 0.8);
+            animation: bezelFlash 0.35s infinite alternate;
+        }
+
+        @keyframes bezelFlash {
+            0% { background: #ff0077; color: #fff; border-color: #ff0077; box-shadow: 0 0 8px #ff0077; }
+            100% { background: #ffcc00; color: #111; border-color: #ffcc00; box-shadow: 0 0 12px #ffcc00; }
+        }
+
+        #bezel-boss-panel {
+            display: none;
+            width: 100%;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #bezel-boss-gauge {
+            flex: 1;
+            height: 10px;
+            background: #181822;
+            border: 1px solid #333344;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        #bezel-boss-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0044, #ff0077);
+            box-shadow: 0 0 8px #ff0044;
+            width: 100%;
+            transition: width 0.1s linear;
+        }
+
+        #bezel-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+            padding: 4px 6px;
+            font-family: 'DotGothic16', monospace;
+            font-size: 11px;
+            color: #666677;
+            letter-spacing: 1px;
+        }
+
+        .bezel-badge {
+            color: #888899;
+            font-weight: bold;
+        }
+
         #game-wrapper {
             position: relative;
             width: 640px;
             margin: 0 auto;
             overflow: hidden;
+            border-radius: 6px;
         }
 
         canvas {
             width: 640px;
             height: 608px;
-            background-color: #9bbc0f;
-            border: 12px solid #111;
-            border-radius: 8px;
+            background-color: #000;
+            border: 4px solid #08080c;
+            border-radius: 6px;
             image-rendering: pixelated;
             box-sizing: border-box;
             display: block;
@@ -334,12 +567,66 @@
 
 <body>
     <h2>Mitzi's Mischief - NGPC Spec</h2>
-    <div id="game-wrapper" style="position: relative; width: 640px; margin: 0 auto; overflow: hidden;">
-        <canvas id="gameCanvas" width="160" height="152"></canvas>
+    <div id="bezel-casing">
+        <div id="bezel-header">
+            <!-- Left: Score & Stage -->
+            <div class="bezel-panel bezel-panel-left">
+                <div class="bezel-title">SCORE</div>
+                <div id="bezel-score">000000</div>
+                <div id="bezel-stage">STAGE 1: FOREST</div>
+            </div>
 
-        <div id="hud-ui" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;">
-            <div id="hud-score" style="position: absolute; top: 16px; left: 16px; font-family: 'DotGothic16', sans-serif; font-size: 24px; color: #fff; text-shadow: 2px 2px 0px #000;">SCORE: 0</div>
+            <!-- Center Normal: Life & EXP -->
+            <div class="bezel-panel bezel-panel-center" id="bezel-center-panel">
+                <div class="bezel-row">
+                    <span class="bezel-title">LIFE</span>
+                    <div id="bezel-hearts">
+                        <span class="bezel-heart active">♥</span>
+                        <span class="bezel-heart active">♥</span>
+                        <span class="bezel-heart active">♥</span>
+                    </div>
+                </div>
+                <div class="bezel-row">
+                    <span class="bezel-title" id="bezel-level-label">LV.1</span>
+                    <div id="bezel-exp-gauge">
+                        <div class="bezel-exp-pip filled lvl-1"></div>
+                        <div class="bezel-exp-pip"></div>
+                        <div class="bezel-exp-pip"></div>
+                        <div class="bezel-exp-pip"></div>
+                        <div class="bezel-exp-pip"></div>
+                        <div class="bezel-exp-pip"></div>
+                        <div class="bezel-exp-pip"></div>
+                        <div class="bezel-exp-pip"></div>
+                        <div class="bezel-exp-pip"></div>
+                        <div class="bezel-exp-pip"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Boss: Shown during boss fights -->
+            <div class="bezel-panel bezel-panel-center" id="bezel-boss-panel" style="display: none;">
+                <div class="bezel-title" style="color: #ff0044; letter-spacing: 2px;">BOSS LIFE</div>
+                <div id="bezel-boss-gauge">
+                    <div id="bezel-boss-fill" style="width: 100%;"></div>
+                </div>
+            </div>
+
+            <!-- Right: Magic Bomb Stocks & Charge Status -->
+            <div class="bezel-panel bezel-panel-right">
+                <div class="bezel-row">
+                    <span class="bezel-title">MAGIC</span>
+                    <div id="bezel-stocks">
+                        <div class="bezel-stock-slot empty"></div>
+                        <div class="bezel-stock-slot empty"></div>
+                        <div class="bezel-stock-slot empty"></div>
+                    </div>
+                </div>
+                <div id="bezel-charge-status">HOLD TO BOMB</div>
+            </div>
         </div>
+
+        <div id="game-wrapper" style="position: relative; width: 640px; margin: 0 auto; overflow: hidden;">
+            <canvas id="gameCanvas" width="160" height="152"></canvas>
 
         <div id="message-ui" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 6; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.7);">
             <h2 id="message-title" style="font-family: 'DotGothic16', sans-serif; font-size: 48px; color: #fff; margin: 0; text-shadow: 4px 4px 0px #ff0077;">GAME OVER</h2>
@@ -389,8 +676,11 @@
                 <button id="btn-close-settings" class="menu-btn" style="font-size: 15px; padding: 8px 18px;">CLOSE</button>
             </div>
         </div>
+        <div id="bezel-footer">
+            <div class="bezel-badge">★ NEO GEO POCKET COLOR SPEC ★</div>
+            <div class="bezel-hint">ARROWS: MOVE | [SPACE] SHOOT / HOLD FOR BOMB</div>
+        </div>
     </div>
-    <p>Arrow Keys: Move | SPACE: Shoot</p>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
@@ -1559,31 +1849,105 @@
             frameCount++;
         }
 
+        function updateBezelHUD() {
+            const bScore = document.getElementById('bezel-score');
+            if (bScore) bScore.innerText = score.toString().padStart(6, '0');
+
+            const bStage = document.getElementById('bezel-stage');
+            if (bStage) {
+                const names = ["FOREST", "BAMBOO GROVE", "CITY DOCKS", "RETROPUB STREETS", "WIFI MAIDEN SHRINE", "FORTRESS"];
+                bStage.innerText = "STAGE " + currentStage + ": " + (names[currentStage - 1] || "");
+            }
+
+            const bHearts = document.getElementById('bezel-hearts');
+            if (bHearts) {
+                let heartsHtml = '';
+                for (let i = 0; i < mitzi.maxHP; i++) {
+                    heartsHtml += `<span class="bezel-heart ${i < mitzi.hp ? 'active' : ''}">♥</span>`;
+                }
+                bHearts.innerHTML = heartsHtml;
+            }
+
+            const bLvl = document.getElementById('bezel-level-label');
+            if (bLvl) bLvl.innerText = "LV." + mitzi.level;
+
+            const bExp = document.getElementById('bezel-exp-gauge');
+            if (bExp) {
+                let expHtml = '';
+                for (let i = 0; i < 10; i++) {
+                    const filled = i < mitzi.exp;
+                    expHtml += `<div class="bezel-exp-pip ${filled ? 'filled lvl-' + mitzi.level : ''}"></div>`;
+                }
+                bExp.innerHTML = expHtml;
+            }
+
+            const bStocks = document.getElementById('bezel-stocks');
+            if (bStocks) {
+                let stocksHtml = '';
+                for (let i = 0; i < 3; i++) {
+                    if (i < mitzi.magicStocks.length) {
+                        const type = mitzi.magicStocks[i];
+                        const label = type === 'homing' ? 'H' : 'P';
+                        stocksHtml += `<div class="bezel-stock-slot ${type}" title="${type === 'homing' ? 'Homing Swarm' : 'Piercing Laser'}">${label}</div>`;
+                    } else {
+                        stocksHtml += `<div class="bezel-stock-slot empty"></div>`;
+                    }
+                }
+                bStocks.innerHTML = stocksHtml;
+            }
+
+            const bCharge = document.getElementById('bezel-charge-status');
+            if (bCharge) {
+                if (mitzi.chargeTimer >= 60 && mitzi.magicStocks.length > 0) {
+                    bCharge.className = "ready";
+                    bCharge.innerText = "★ BOMB READY! ★";
+                } else if (mitzi.chargeTimer > 15 && mitzi.magicStocks.length > 0) {
+                    bCharge.className = "";
+                    bCharge.innerText = "CHARGING...";
+                } else {
+                    bCharge.className = "";
+                    bCharge.innerText = mitzi.magicStocks.length > 0 ? "HOLD TO BOMB" : "NO STOCKS";
+                }
+            }
+
+            const bBossPanel = document.getElementById('bezel-boss-panel');
+            const bCenterPanel = document.getElementById('bezel-center-panel');
+            const bBossFill = document.getElementById('bezel-boss-fill');
+            if (bBossPanel && bBossPanel.style && bCenterPanel && bCenterPanel.style) {
+                if (gameState === 'BOSS_FIGHT' && boss.active) {
+                    bBossPanel.style.display = 'flex';
+                    bCenterPanel.style.display = 'none';
+                    if (bBossFill && bBossFill.style) {
+                        let pct = Math.max(0, Math.min(100, Math.floor((boss.hp / boss.maxHP) * 100)));
+                        bBossFill.style.width = pct + '%';
+                    }
+                } else {
+                    bBossPanel.style.display = 'none';
+                    bCenterPanel.style.display = 'flex';
+                }
+            }
+        }
+
         function draw() {
-            const hudUi = document.getElementById('hud-ui');
-            const hudScore = document.getElementById('hud-score');
             const messageUi = document.getElementById('message-ui');
             const messageTitle = document.getElementById('message-title');
             const messageSub = document.getElementById('message-sub');
 
             if (gameState === 'START_MENU') {
-                if (hudUi && hudUi.style) hudUi.style.display = 'none';
                 if (messageUi && messageUi.style) messageUi.style.display = 'none';
             } else if (gameState === 'PLAYING' || gameState === 'BOSS_TRANSITION' || gameState === 'BOSS_FIGHT') {
-                if (hudUi && hudUi.style) hudUi.style.display = 'block';
-                if (hudScore) hudScore.innerText = "SCORE: " + score;
                 if (messageUi && messageUi.style) messageUi.style.display = 'none';
             } else if (gameState === 'STAGE_TRANSITION') {
                 if (messageUi && messageUi.style) messageUi.style.display = 'flex';
                 if (messageTitle) messageTitle.innerText = "STAGE " + currentStage + " CLEAR";
                 if (messageSub) messageSub.innerText = "PRESS [" + formatKeyName(keyMap.shoot).toUpperCase() + "] TO CONTINUE";
-                if (hudUi && hudUi.style) hudUi.style.display = 'none';
             } else if (gameState === 'GAME_OVER' || gameState === 'GAME_CLEAR') {
                 if (messageUi && messageUi.style) messageUi.style.display = 'flex';
                 if (messageTitle) messageTitle.innerText = gameState === 'GAME_OVER' ? "GAME OVER" : "MISSION ACCOMPLISHED";
                 if (messageSub) messageSub.innerText = "PRESS [" + formatKeyName(keyMap.shoot).toUpperCase() + "] TO RESTART";
-                if (hudUi && hudUi.style) hudUi.style.display = 'none';
             }
+
+            updateBezelHUD();
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -1638,22 +2002,59 @@
                 boss.draw();
             }
 
-            if (gameState === 'BOSS_FIGHT') {
-                // Draw Boss HP bar
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(Math.floor(canvas.width / 2 - 40), 5, 80, 6);
-                ctx.fillStyle = '#ff0044';
-                ctx.fillRect(Math.floor(canvas.width / 2 - 39), 6, Math.floor(78 * (Math.max(0, boss.hp) / boss.maxHP)), 4);
-            }
-
-            // Draw Mitzi (with Charge Aura)
+            // Draw Mitzi (with Elegant Celestial Charge Aura)
             if (!mitzi.dead && (mitzi.iFrames === 0 || Math.floor(frameCount / 4) % 2 === 0)) {
                 let drawY = Math.floor(mitzi.y - cameraY);
                 
-                // Flashing Aura when fully charged
+                // Elegant Shimmering Charge Aura when fully charged
                 if (mitzi.chargeTimer >= 60 && mitzi.magicStocks.length > 0) {
-                    ctx.fillStyle = (frameCount % 10 < 5) ? palette[2] : palette[4];
-                    ctx.fillRect(Math.floor(mitzi.x) - 2, drawY - 2, 36, 36);
+                    let nextBomb = mitzi.magicStocks[0];
+                    let auraColor = (nextBomb === 'homing') 
+                        ? (frameCount % 6 < 3 ? palette[2] : palette[3]) 
+                        : (frameCount % 6 < 3 ? palette[4] : palette[3]);
+
+                    let cx = Math.floor(mitzi.x) + 16;
+                    let cy = drawY + 16;
+
+                    // 6 orbiting sparkling energy wisps (2x2 pixel sparks)
+                    ctx.fillStyle = auraColor;
+                    for (let s = 0; s < 6; s++) {
+                        let sAngle = (frameCount * 0.14) + (s * (Math.PI * 2 / 6));
+                        let sDist = 19 + Math.sin(frameCount * 0.25 + s) * 2;
+                        let sx = Math.floor(cx + Math.cos(sAngle) * sDist) - 1;
+                        let sy = Math.floor(cy + Math.sin(sAngle) * sDist) - 1;
+                        ctx.fillRect(sx, sy, 2, 2);
+                    }
+
+                    // Delicate pulsing corner brackets [ ] framing Mitzi's 32x32 sprite
+                    let mx = Math.floor(mitzi.x);
+                    let my = drawY;
+                    ctx.fillStyle = (frameCount % 8 < 4) ? auraColor : palette[3];
+                    // Top-Left corner
+                    ctx.fillRect(mx + 1, my + 1, 3, 1);
+                    ctx.fillRect(mx + 1, my + 1, 1, 3);
+                    // Top-Right corner
+                    ctx.fillRect(mx + 28, my + 1, 3, 1);
+                    ctx.fillRect(mx + 30, my + 1, 1, 3);
+                    // Bottom-Left corner
+                    ctx.fillRect(mx + 1, my + 30, 3, 1);
+                    ctx.fillRect(mx + 1, my + 28, 1, 3);
+                    // Bottom-Right corner
+                    ctx.fillRect(mx + 28, my + 30, 3, 1);
+                    ctx.fillRect(mx + 30, my + 28, 1, 3);
+                } else if (mitzi.chargeTimer > 15 && mitzi.magicStocks.length > 0) {
+                    // Subtle gathering energy sparks while holding charge
+                    let gatherProgress = (60 - mitzi.chargeTimer) / 45;
+                    let cx = Math.floor(mitzi.x) + 16;
+                    let cy = drawY + 16;
+                    ctx.fillStyle = palette[3];
+                    for (let g = 0; g < 3; g++) {
+                        let gAngle = (frameCount * 0.12) + (g * (Math.PI * 2 / 3));
+                        let gDist = 12 + gatherProgress * 14;
+                        let gx = Math.floor(cx + Math.cos(gAngle) * gDist);
+                        let gy = Math.floor(cy + Math.sin(gAngle) * gDist);
+                        ctx.fillRect(gx, gy, 1, 1);
+                    }
                 }
 
                 if (mitziImg.complete && mitziImg.naturalHeight !== 0) {
@@ -1675,31 +2076,6 @@
                     
                     drawSprite(satX, satY, fishPixels, fishSwap);
                 }
-            }
-
-            // Draw Health HUD (Native pixel blocks render crisp on canvas)
-            for (let index = 0; index < mitzi.maxHP; index++) {
-                ctx.fillStyle = index < mitzi.hp ? "#ff0077" : "#333333";
-                ctx.fillRect(4 + (index * 8), 16, 6, 6);
-            }
-            
-            // Draw EXP HUD (Level 1: White, Level 2: Yellow, Level 3: Pink)
-            let expColor = "#ffffff";
-            if (mitzi.level === 2) expColor = "#ffcc00";
-            if (mitzi.level === 3) expColor = "#ff0077";
-            for (let index = 0; index < 10; index++) {
-                ctx.fillStyle = index < mitzi.exp ? expColor : "#333333";
-                ctx.fillRect(4 + (index * 4), 24, 3, 3);
-            }
-
-            // Draw Magic Stocks HUD
-            for (let i = 0; i < 3; i++) {
-                if (i < mitzi.magicStocks.length) {
-                    ctx.fillStyle = mitzi.magicStocks[i] === 'homing' ? palette[2] : palette[4];
-                } else {
-                    ctx.fillStyle = "#333333";
-                }
-                ctx.fillRect(4 + (i * 8), 32, 6, 6);
             }
 
             if (gameState === 'STAGE_TRANSITION') {
