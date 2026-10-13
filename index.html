@@ -545,13 +545,15 @@
 
         const palette = { 1: "#111111", 2: "#ff0077", 3: "#ffffff", 4: "#ffcc00", 5: "#9cb8cc" };
 
+        // Sleek CSS-style Title Screen Fish
         const fishPixels = [
-            [0, 0, 0, 1, 1, 1, 1, 0],
-            [1, 0, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 3, 1, 1], 
-            [1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 0, 1, 1, 1, 1, 1, 0],
-            [0, 0, 0, 1, 1, 1, 0, 0]
+            [0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
+            [1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0],
+            [1, 1, 0, 1, 1, 1, 1, 1, 3, 1, 1], // 3 is the white eye
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0]
         ];
 
         // Narutomaki Swirl Bullet
@@ -1194,13 +1196,23 @@
                         let bx = mitzi.x + 32;
                         let by = Math.floor(mitzi.y - cameraY) + 15;
                         
-                        // Calculate Satellite Position
-                        let satX = mitzi.x + 16 + Math.cos(mitzi.satAngle) * 24;
-                        let satY = (mitzi.y - cameraY) + 16 + Math.sin(mitzi.satAngle) * 24;
-                        
-                        // Satellite always fires a supporting shot
-                        bullets.push({ x: satX, y: satY, width: 6, height: 5, speed: 4, type: mitzi.magic, dy: 0, isSatShot: true });
+                        // Dynamic Satellite Multi-Shot Spread
+                        let numSatellites = mitzi.level; // 1, 2, or 3 fish
+                        for (let i = 0; i < numSatellites; i++) {
+                            let angleOffset = mitzi.satAngle + (i * (Math.PI * 2 / numSatellites));
+                            let satX = mitzi.x + 16 + Math.cos(angleOffset) * 24;
+                            let satY = (mitzi.y - cameraY) + 16 + Math.sin(angleOffset) * 24;
+                            
+                            // Slight vertical spread based on orbit position
+                            let spreadDY = Math.sin(angleOffset) * 0.75;
+                            
+                            bullets.push({ 
+                                x: satX, y: satY, width: 6, height: 5, 
+                                speed: 4, type: mitzi.magic, dy: spreadDY, isSatShot: true 
+                            });
+                        }
 
+                        // Mitzi's Primary Shots
                         if (mitzi.level === 1) {
                             bullets.push({ x: bx, y: by, width: 6, height: 5, speed: 4, type: mitzi.magic, dy: 0 });
                         } else if (mitzi.level === 2) {
@@ -1649,16 +1661,20 @@
                 }
             }
 
-            // Draw Upright Orbiting Fish Satellite
+            // Draw Dynamic Upright Orbiting Fish Satellites
             if (!mitzi.dead) {
-                let satX = Math.floor(mitzi.x + 16 + Math.cos(mitzi.satAngle) * 24) - 4;
-                let satY = Math.floor(mitzi.y - cameraY + 16 + Math.sin(mitzi.satAngle) * 24) - 3;
-                
-                let fishSwap = { 1: 5 }; // Light Blue
-                if (mitzi.magic === 'piercing') fishSwap = { 1: 4 };
-                if (mitzi.magic === 'homing') fishSwap = { 1: 2 };
-                
-                drawSprite(satX, satY, fishPixels, fishSwap);
+                let numSatellites = mitzi.level;
+                for (let i = 0; i < numSatellites; i++) {
+                    let angleOffset = mitzi.satAngle + (i * (Math.PI * 2 / numSatellites));
+                    let satX = Math.floor(mitzi.x + 16 + Math.cos(angleOffset) * 24) - 5;
+                    let satY = Math.floor(mitzi.y - cameraY + 16 + Math.sin(angleOffset) * 24) - 3;
+                    
+                    let fishSwap = { 1: 5 }; // Default Light Blue
+                    if (mitzi.magic === 'piercing') fishSwap = { 1: 4 };
+                    if (mitzi.magic === 'homing') fishSwap = { 1: 2 };
+                    
+                    drawSprite(satX, satY, fishPixels, fishSwap);
+                }
             }
 
             // Draw Health HUD (Native pixel blocks render crisp on canvas)
