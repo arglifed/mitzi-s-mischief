@@ -468,7 +468,7 @@
                     let spawnWorldX = cameraX + mitzi.x + (mitzi.width / 2);
                     let startFloor = getSmoothFloorY(spawnWorldX, activeStage);
                     mitzi.y = startFloor - mitzi.height;
-                    cameraY = Math.max(0, Math.min(activeStage.mapHeight - canvas.height, startFloor - canvas.height + 32));
+                    cameraY = Math.max(0, Math.min(activeStage.mapHeight - canvas.height, startFloor - canvas.height + 40));
                     mitzi.magic = null;
                     gameState = 'PLAYING';
                     keys[e.key] = false;
@@ -501,7 +501,7 @@
 
             // Snap her exactly to the ground
             mitzi.y = startFloor - mitzi.height;
-            cameraY = Math.max(0, Math.min(activeStage.mapHeight - canvas.height, startFloor - canvas.height + 32));
+            cameraY = Math.max(0, Math.min(activeStage.mapHeight - canvas.height, startFloor - canvas.height + 40));
 
             mitzi.dead = false;
             mitzi.hp = mitzi.maxHP;
@@ -613,30 +613,56 @@
 
         function generateMountainMap() {
             const rows = 19; 
-            const cols = 315; 
+            const cols = 350; // Safely covers the 5000px boss distance
             let map = Array.from({ length: rows }, () => Array(cols).fill(0));
 
             for (let c = 0; c < cols; c++) {
                 let surfaceRow;
-                if (c < 40) surfaceRow = 15;
-                else if (c < 220) surfaceRow = 15 - Math.floor((c - 40) / 18); // Climb
-                else if (c < 312) surfaceRow = 5; // Plateau
-                else if (c < 322) surfaceRow = 5 + (c - 312); // Drop off to boss
-                else surfaceRow = 20;
+                if (c < 40) {
+                    surfaceRow = 15; // Low valley base
+                } else if (c < 120) {
+                    // Dramatic steep climb: 1 step up every 10 tiles
+                    surfaceRow = 15 - Math.floor((c - 40) / 10); 
+                } else {
+                    surfaceRow = 7; // Flat summit plateau - no drop off!
+                }
 
                 if (surfaceRow < rows) {
                     map[surfaceRow][c] = 1; // Grass
-                    
-                    // Randomly place a fence (ID 3) on the row above the grass, spaced out
-                    if (surfaceRow - 1 >= 0 && c % 4 === 0 && Math.random() > 0.5) {
-                        map[surfaceRow - 1][c] = 3; 
-                    }
 
                     for (let r = surfaceRow + 1; r < rows; r++) {
                         map[r][c] = 2; // Dirt
                     }
                 }
             }
+
+            // Place trees (ID 3) and fence/bench tiles (ID 6) on top of the grass
+            for (let c = 2; c < cols - 2; c++) {
+                let surfaceRow = -1;
+                for (let r = 0; r < rows; r++) {
+                    if (map[r][c] === 1) { surfaceRow = r; break; }
+                }
+                if (surfaceRow <= 0) continue;
+
+                let prevFlat = (map[surfaceRow] && map[surfaceRow][c - 1] === 1);
+                let nextFlat = (map[surfaceRow] && map[surfaceRow][c + 1] === 1);
+
+                // Place brown trees (ID 3) on flat sections
+                if (c % 6 === 0 && Math.random() > 0.35) {
+                    map[surfaceRow - 1][c] = 3; // Brown tree
+
+                    // Place a fence/bench (ID 6) right around the tree
+                    if (nextFlat && Math.random() > 0.35 && !map[surfaceRow - 1][c + 1]) {
+                        map[surfaceRow - 1][c + 1] = 6; // Fence/bench next to tree
+                    } else if (prevFlat && Math.random() > 0.35 && !map[surfaceRow - 1][c - 1]) {
+                        map[surfaceRow - 1][c - 1] = 6; // Fence/bench next to tree
+                    }
+                } else if (c % 14 === 3 && nextFlat && !map[surfaceRow - 1][c]) {
+                    // Occasional standalone fence/bench along the grass
+                    map[surfaceRow - 1][c] = 6;
+                }
+            }
+
             return map;
         }
         const mapStage1 = generateMountainMap();
@@ -872,11 +898,10 @@
                 let checkCol = c;
                 const mapCols = map[0].length;
                 
-                // Loop the column check for infinitely scrolling flat stages
-                if (activeStage !== stageConfigs[0]) {
+                if (activeStage === stageConfigs[0]) {
+                    checkCol = (c < mapCols) ? Math.max(0, c) : 120 + ((c - 120) % (mapCols - 120));
+                } else {
                     checkCol = ((c % mapCols) + mapCols) % mapCols;
-                } else if (c < 0 || c >= mapCols) {
-                    return defaultFloor;
                 }
                 
                 for (let r = 0; r < map.length; r++) {
@@ -1010,6 +1035,17 @@
                 }
             }
 
+            // Boss Arena Background sliding / locked
+            if (gameState === 'BOSS_TRANSITION' && activeStage.bossBgImage) {
+                if (activeStage.bossBgImage.complete && activeStage.bossBgImage.naturalHeight !== 0) {
+                    ctx.drawImage(activeStage.bossBgImage, Math.floor(canvas.width - slideIn), 0);
+                }
+            } else if ((gameState === 'BOSS_FIGHT' || gameState === 'STAGE_TRANSITION' || gameState === 'GAME_CLEAR') && activeStage.bossBgImage) {
+                if (activeStage.bossBgImage.complete && activeStage.bossBgImage.naturalHeight !== 0) {
+                    ctx.drawImage(activeStage.bossBgImage, Math.floor(canvas.width - bossBgWidth), 0);
+                }
+            }
+
             if (activeStage.tileset && activeStage.tileset.complete && activeStage.tileset.naturalHeight !== 0) {
                 const tileSize = 16;
 
@@ -1024,9 +1060,10 @@
                 if (shouldDrawTiles && activeStage.foregroundMap && activeStage.foregroundMap.length > 0) {
                     for (let row = 0; row < activeStage.foregroundMap.length; row++) {
                         for (let c = 0; c < colsToDraw; c++) {
+                            const mapCols = activeStage.foregroundMap[0].length;
                             const mapCol = (activeStage === stageConfigs[0])
-                                ? (startCol + c < activeStage.foregroundMap[0].length ? startCol + c : -1)
-                                : (startCol + c) % activeStage.foregroundMap[0].length;
+                                ? (startCol + c < mapCols ? startCol + c : 120 + ((startCol + c - 120) % (mapCols - 120)))
+                                : (startCol + c) % mapCols;
                             if (mapCol === -1) continue;
 
                             const tileVal = activeStage.foregroundMap[row][mapCol];
@@ -1049,17 +1086,6 @@
                             );
                         }
                     }
-                }
-            }
-
-            // Boss Arena Background sliding / locked
-            if (gameState === 'BOSS_TRANSITION' && activeStage.bossBgImage) {
-                if (activeStage.bossBgImage.complete && activeStage.bossBgImage.naturalHeight !== 0) {
-                    ctx.drawImage(activeStage.bossBgImage, Math.floor(canvas.width - slideIn), 0);
-                }
-            } else if ((gameState === 'BOSS_FIGHT' || gameState === 'STAGE_TRANSITION' || gameState === 'GAME_CLEAR') && activeStage.bossBgImage) {
-                if (activeStage.bossBgImage.complete && activeStage.bossBgImage.naturalHeight !== 0) {
-                    ctx.drawImage(activeStage.bossBgImage, Math.floor(canvas.width - bossBgWidth), 0);
                 }
             }
         }
@@ -1146,21 +1172,14 @@
                     let targetCameraY = 0;
                     
                     if (maxCamY > 0) {
-                        targetCameraY = Math.min(maxCamY, currentFloorY - canvas.height + 32);
+                        // The +40 offset ensures the summit at Row 7 (112px) results in exactly 0 targetCameraY
+                        targetCameraY = Math.max(0, Math.min(maxCamY, currentFloorY - canvas.height + 40));
                     }
                     
-                    cameraY += (targetCameraY - cameraY) * 0.1; 
+                    cameraY += (targetCameraY - cameraY) * 0.05; 
                 } else {
-                    if (activeStage === stageConfigs[0]) {
-                        // Cinematic pan high into the pure night sky ONLY for Stage 1
-                        let targetCameraY = -80; 
-                        cameraY += (targetCameraY - cameraY) * 0.02; 
-                        currentFloorY = cameraY + canvas.height - 16; 
-                    } else {
-                        // Flat stages stay locked to 0 so the sliding boss BG seam stays flawless
-                        cameraY = 0;
-                        // currentFloorY naturally uses the looping floor mapped from getSmoothFloorY
-                    }
+                    // Lock strictly to 0 for all boss transitions to preserve horizontal BG seams
+                    cameraY = 0;
                 }
 
                 // Apply Floor Collision
