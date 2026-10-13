@@ -9,7 +9,7 @@ A Neo Geo Pocket Color (NGPC) inspired side-scrolling arcade shooter featuring M
   - Stage 2: Bamboo Grove
   - Stage 3: City Docks
   - Stage 4: Retropub Streets
-  - Stage 5: WiFi Maiden Shrine
+  - Stage 5: WiFi Maiden's Shrine
   - Stage 6: Fortress
 - **Multi-Stage Mechanics**: Dynamic boss arena camera pans, seamless parallax stitching, stage transitions, and custom foreground tilemaps.
 - **Authentic Combat & Progression (Cotton Inspired)**:
