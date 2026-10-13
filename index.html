@@ -519,6 +519,8 @@
             mitzi.cooldown = 0;
             mitzi.exp = 0;
             mitzi.level = 1;
+            mitzi.magicStocks = [];
+            mitzi.chargeTimer = 0;
             transitionTimer = 0;
             if (keyMap && keyMap.shoot) keys[keyMap.shoot] = false;
             keys[" "] = false;
@@ -543,7 +545,7 @@
         const palette = { 1: "#111111", 2: "#ff0077", 3: "#ffffff", 4: "#ffcc00" };
 
         // Change speed to 1 for authentic NGPC weight
-        const mitzi = { x: 20, y: 70, speed: 1, cooldown: 0, width: 32, height: 32, magic: null, dead: false, hp: 3, maxHP: 3, iFrames: 0, exp: 0, level: 1 };
+        const mitzi = { x: 20, y: 70, speed: 1, cooldown: 0, width: 32, height: 32, magic: null, dead: false, hp: 3, maxHP: 3, iFrames: 0, exp: 0, level: 1, magicStocks: [], chargeTimer: 0 };
         const bullets = [];
         const bossBullets = [];
         const enemies = [];
@@ -1161,22 +1163,51 @@
                 if (keys[keyMap.left] && mitzi.x > 0) mitzi.x -= mitzi.speed;
                 if (keys[keyMap.right] && mitzi.x < canvas.width - mitzi.width) mitzi.x += mitzi.speed;
 
-                // Shooting
-                if (keys[keyMap.shoot] && mitzi.cooldown <= 0) {
-                    let bx = mitzi.x + 32;
-                    let by = Math.floor(mitzi.y - cameraY) + 15;
+                // Shooting & Charging Logic
+                if (keys[keyMap.shoot]) {
+                    mitzi.chargeTimer++;
                     
-                    if (mitzi.level === 1) {
-                        bullets.push({ x: bx, y: by, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0 });
-                    } else if (mitzi.level === 2) {
-                        bullets.push({ x: bx, y: by - 4, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0 });
-                        bullets.push({ x: bx, y: by + 4, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0 });
-                    } else if (mitzi.level === 3) {
-                        bullets.push({ x: bx, y: by - 6, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: -0.5 });
-                        bullets.push({ x: bx, y: by, width: 6, height: 4, speed: 4, type: mitzi.magic, dy: 0 }); // Bigger center bullet
-                        bullets.push({ x: bx, y: by + 6, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0.5 });
+                    // Only fire regular bullets if we haven't reached the 60-frame charge threshold
+                    if (mitzi.chargeTimer < 60 && mitzi.cooldown <= 0) {
+                        let bx = mitzi.x + 32;
+                        let by = Math.floor(mitzi.y - cameraY) + 15;
+                        
+                        if (mitzi.level === 1) {
+                            bullets.push({ x: bx, y: by, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0 });
+                        } else if (mitzi.level === 2) {
+                            bullets.push({ x: bx, y: by - 4, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0 });
+                            bullets.push({ x: bx, y: by + 4, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0 });
+                        } else if (mitzi.level === 3) {
+                            bullets.push({ x: bx, y: by - 6, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: -0.5 });
+                            bullets.push({ x: bx, y: by, width: 6, height: 4, speed: 4, type: mitzi.magic, dy: 0 });
+                            bullets.push({ x: bx, y: by + 6, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0.5 });
+                        }
+                        mitzi.cooldown = 8;
                     }
-                    mitzi.cooldown = 8;
+                } else {
+                    // Button Released: Check for Bomb Trigger
+                    if (mitzi.chargeTimer >= 60 && mitzi.magicStocks.length > 0) {
+                        let bombType = mitzi.magicStocks.shift(); // Consume the oldest stock
+                        let bx = mitzi.x + 32;
+                        let by = Math.floor(mitzi.y - cameraY) + 15;
+                        
+                        if (bombType === 'homing') {
+                            // Pink Bomb: Screen-clearing Homing Swarm
+                            for (let i = 0; i < 15; i++) {
+                                bullets.push({ 
+                                    x: bx, y: by, width: 6, height: 6, 
+                                    speed: 3 + Math.random() * 3, type: 'homing', dy: (Math.random() - 0.5) * 8 
+                                });
+                            }
+                        } else if (bombType === 'piercing') {
+                            // Yellow Bomb: Giant Sustained Piercing Laser
+                            bullets.push({ 
+                                x: bx, y: by - 12, width: 160, height: 24, 
+                                speed: 6, type: 'piercing', dy: 0 
+                            });
+                        }
+                    }
+                    mitzi.chargeTimer = 0; // Reset charge on release
                 }
             }
             if (mitzi.cooldown > 0) mitzi.cooldown--;
@@ -1378,7 +1409,12 @@
                 let crystalScreenBox = { x: screenX, y: screenY, width: c.width, height: c.height };
                 if (!mitzi.dead && checkCollision(getMitziItemHitbox(), crystalScreenBox)) {
                     let colorKey = magicColors[c.colorIndex];
-                    mitzi.magic = (colorKey === 2) ? 'homing' : 'piercing';
+                    let magicType = (colorKey === 2) ? 'homing' : 'piercing';
+                    mitzi.magic = magicType; 
+                    
+                    if (mitzi.magicStocks.length < 3) {
+                        mitzi.magicStocks.push(magicType);
+                    }
                     
                     mitzi.exp += 1;
                     if (mitzi.exp > 10) mitzi.exp = 10;
@@ -1556,9 +1592,18 @@
                 ctx.fillRect(Math.floor(canvas.width / 2 - 39), 6, Math.floor(78 * (Math.max(0, boss.hp) / boss.maxHP)), 4);
             }
 
+            // Draw Mitzi (with Charge Aura)
             if (!mitzi.dead && (mitzi.iFrames === 0 || Math.floor(frameCount / 4) % 2 === 0)) {
+                let drawY = Math.floor(mitzi.y - cameraY);
+                
+                // Flashing Aura when fully charged
+                if (mitzi.chargeTimer >= 60 && mitzi.magicStocks.length > 0) {
+                    ctx.fillStyle = (frameCount % 10 < 5) ? palette[2] : palette[4];
+                    ctx.fillRect(Math.floor(mitzi.x) - 2, drawY - 2, 36, 36);
+                }
+
                 if (mitziImg.complete && mitziImg.naturalHeight !== 0) {
-                    ctx.drawImage(mitziImg, 0, 0, 32, 32, Math.floor(mitzi.x), Math.floor(mitzi.y - cameraY), 32, 32);
+                    ctx.drawImage(mitziImg, 0, 0, 32, 32, Math.floor(mitzi.x), drawY, 32, 32);
                 }
             }
 
@@ -1575,6 +1620,16 @@
             for (let index = 0; index < 10; index++) {
                 ctx.fillStyle = index < mitzi.exp ? expColor : "#333333";
                 ctx.fillRect(4 + (index * 4), 24, 3, 3);
+            }
+
+            // Draw Magic Stocks HUD
+            for (let i = 0; i < 3; i++) {
+                if (i < mitzi.magicStocks.length) {
+                    ctx.fillStyle = mitzi.magicStocks[i] === 'homing' ? palette[2] : palette[4];
+                } else {
+                    ctx.fillStyle = "#333333";
+                }
+                ctx.fillRect(4 + (i * 8), 32, 6, 6);
             }
 
             if (gameState === 'STAGE_TRANSITION') {
