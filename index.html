@@ -207,28 +207,63 @@
             100% { background: #ffcc00; color: #111; border-color: #ffcc00; box-shadow: 0 0 12px #ffcc00; }
         }
 
-        #bezel-boss-panel {
+        #bezel-boss-strip {
             display: none;
-            width: 100%;
+            justify-content: space-between;
             align-items: center;
-            gap: 8px;
+            background: #0f0508;
+            border: 2px solid #551122;
+            border-radius: 6px;
+            padding: 6px 14px;
+            margin-bottom: 8px;
+            font-family: 'DotGothic16', monospace;
+            box-sizing: border-box;
+            box-shadow: 0 0 14px rgba(255, 0, 68, 0.3), inset 0 1px 4px rgba(0, 0, 0, 0.8);
+            animation: bossStripPulse 1.5s infinite alternate;
         }
 
-        #bezel-boss-gauge {
+        @keyframes bossStripPulse {
+            0% { border-color: #551122; box-shadow: 0 0 8px rgba(255, 0, 68, 0.25); }
+            100% { border-color: #ff0044; box-shadow: 0 0 16px rgba(255, 0, 68, 0.5); }
+        }
+
+        .bezel-boss-title {
+            color: #ff0044;
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-shadow: 0 0 8px rgba(255, 0, 68, 0.7);
+            flex-shrink: 0;
+        }
+
+        .bezel-boss-track {
             flex: 1;
-            height: 10px;
-            background: #181822;
-            border: 1px solid #333344;
+            height: 12px;
+            background: #1c080d;
+            border: 1px solid #771122;
             border-radius: 3px;
             overflow: hidden;
+            margin: 0 12px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
         }
 
         #bezel-boss-fill {
             height: 100%;
             background: linear-gradient(90deg, #ff0044, #ff0077);
-            box-shadow: 0 0 8px #ff0044;
+            box-shadow: 0 0 10px #ff0044;
             width: 100%;
             transition: width 0.1s linear;
+        }
+
+        #bezel-boss-pct {
+            color: #ff0077;
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            flex-shrink: 0;
+            min-width: 40px;
+            text-align: right;
+            text-shadow: 0 0 6px rgba(255, 0, 119, 0.6);
         }
 
         #bezel-footer {
@@ -566,7 +601,6 @@
 </head>
 
 <body>
-    <h2>Mitzi's Mischief - NGPC Spec</h2>
     <div id="bezel-casing">
         <div id="bezel-header">
             <!-- Left: Score & Stage -->
@@ -576,7 +610,7 @@
                 <div id="bezel-stage">STAGE 1: FOREST</div>
             </div>
 
-            <!-- Center Normal: Life & EXP -->
+            <!-- Center Normal: Life & EXP (Always Visible) -->
             <div class="bezel-panel bezel-panel-center" id="bezel-center-panel">
                 <div class="bezel-row">
                     <span class="bezel-title">LIFE</span>
@@ -603,14 +637,6 @@
                 </div>
             </div>
 
-            <!-- Center Boss: Shown during boss fights -->
-            <div class="bezel-panel bezel-panel-center" id="bezel-boss-panel" style="display: none;">
-                <div class="bezel-title" style="color: #ff0044; letter-spacing: 2px;">BOSS LIFE</div>
-                <div id="bezel-boss-gauge">
-                    <div id="bezel-boss-fill" style="width: 100%;"></div>
-                </div>
-            </div>
-
             <!-- Right: Magic Bomb Stocks & Charge Status -->
             <div class="bezel-panel bezel-panel-right">
                 <div class="bezel-row">
@@ -624,6 +650,16 @@
                 <div id="bezel-charge-status">HOLD TO BOMB</div>
             </div>
         </div>
+
+        <!-- Dedicated Boss Life Strip (Visible during boss fights) -->
+        <div id="bezel-boss-strip" style="display: none;">
+            <span class="bezel-boss-title">BOSS LIFE</span>
+            <div class="bezel-boss-track">
+                <div id="bezel-boss-fill" style="width: 100%;"></div>
+            </div>
+            <span id="bezel-boss-pct">100%</span>
+        </div>
+
 
         <div id="game-wrapper" style="position: relative; width: 640px; margin: 0 auto; overflow: hidden;">
             <canvas id="gameCanvas" width="160" height="152"></canvas>
@@ -677,7 +713,7 @@
             </div>
         </div>
         <div id="bezel-footer">
-            <div class="bezel-badge">★ NEO GEO POCKET COLOR SPEC ★</div>
+            <div class="bezel-badge">★ SPD ★</div>
             <div class="bezel-hint">ARROWS: MOVE | [SPACE] SHOOT / HOLD FOR BOMB</div>
         </div>
     </div>
@@ -1910,20 +1946,21 @@
                 }
             }
 
-            const bBossPanel = document.getElementById('bezel-boss-panel');
-            const bCenterPanel = document.getElementById('bezel-center-panel');
+            const bBossStrip = document.getElementById('bezel-boss-strip');
             const bBossFill = document.getElementById('bezel-boss-fill');
-            if (bBossPanel && bBossPanel.style && bCenterPanel && bCenterPanel.style) {
-                if (gameState === 'BOSS_FIGHT' && boss.active) {
-                    bBossPanel.style.display = 'flex';
-                    bCenterPanel.style.display = 'none';
+            const bBossPct = document.getElementById('bezel-boss-pct');
+            if (bBossStrip && bBossStrip.style) {
+                if ((gameState === 'BOSS_FIGHT' || gameState === 'BOSS_TRANSITION') && boss.active) {
+                    bBossStrip.style.display = 'flex';
+                    let pct = Math.max(0, Math.min(100, Math.floor((boss.hp / boss.maxHP) * 100)));
                     if (bBossFill && bBossFill.style) {
-                        let pct = Math.max(0, Math.min(100, Math.floor((boss.hp / boss.maxHP) * 100)));
                         bBossFill.style.width = pct + '%';
                     }
+                    if (bBossPct) {
+                        bBossPct.innerText = pct + '%';
+                    }
                 } else {
-                    bBossPanel.style.display = 'none';
-                    bCenterPanel.style.display = 'flex';
+                    bBossStrip.style.display = 'none';
                 }
             }
         }
