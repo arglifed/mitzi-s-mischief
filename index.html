@@ -465,7 +465,10 @@
                     activeStage = stageConfigs[currentStage - 1];
                     cameraX = 0;
                     mitzi.x = 20;
-                    mitzi.y = 70;
+                    let spawnWorldX = cameraX + mitzi.x + (mitzi.width / 2);
+                    let startFloor = getSmoothFloorY(spawnWorldX, activeStage);
+                    mitzi.y = startFloor - mitzi.height;
+                    cameraY = Math.max(0, Math.min(activeStage.mapHeight - canvas.height, startFloor - canvas.height + 32));
                     mitzi.magic = null;
                     gameState = 'PLAYING';
                     keys[e.key] = false;
@@ -485,12 +488,21 @@
             enemies.length = 0;
             crystals.length = 0;
             cameraX = 0;
+            cameraY = 0;
             currentStage = 1;
             boss.active = false;
             boss.hp = boss.maxHP;
             boss.shootTimer = 0;
             mitzi.x = 20;
-            mitzi.y = 70;
+
+            let activeStage = stageConfigs[currentStage - 1];
+            let spawnWorldX = cameraX + mitzi.x + (mitzi.width / 2);
+            let startFloor = getSmoothFloorY(spawnWorldX, activeStage);
+
+            // Snap her exactly to the ground
+            mitzi.y = startFloor - mitzi.height;
+            cameraY = Math.max(0, Math.min(activeStage.mapHeight - canvas.height, startFloor - canvas.height + 32));
+
             mitzi.dead = false;
             mitzi.hp = mitzi.maxHP;
             mitzi.iFrames = 0;
@@ -526,6 +538,7 @@
         const crystals = [];
         const magicColors = [2, 4]; // Pink = Homing, Yellow = Piercing
         let cameraX = 0;
+        let cameraY = 0;
         let frameCount = 0;
         let currentStage = 1;
         let gameState = 'START_MENU';
@@ -570,46 +583,63 @@
 
         const tileMapDefs = {
             // Stage 1 (Forest)
-            1: [0, 0], // Grass Surface
-            2: [1, 0], // Dirt Underground
-            3: [0, 1], // Tree
-            4: [0, 1], // Tree Alt
-            5: [0, 2], // Bush
-            6: [0, 3], // Fence
+            1: [0, 0],   // Grass Surface
+            2: [16, 0],  // Dirt Underground
+            3: [0, 16],  // Tree
+            4: [0, 16],  // Tree Alt
+            5: [0, 32],  // Bush
+            6: [0, 50],  // Fence
 
-            // Stage 2 (Bamboo) - Row 4
-            11: [0, 4], // Bamboo Surface
-            12: [1, 4], // Bamboo Underground
+            // Stage 2 (Bamboo)
+            11: [0, 67],  // Bamboo Surface
+            12: [16, 67], // Bamboo Underground
 
-            // Stage 3 (City) - Row 5
-            21: [0, 5], // Pavement Surface
-            22: [1, 5], // Concrete Underground
+            // Stage 3 (City)
+            21: [0, 83],  // Pavement Surface
+            22: [16, 83], // Concrete Underground
 
-            // Stage 4 (Retropub) - Row 6
-            31: [0, 6], // Arcade Carpet
-            32: [1, 6], // Floor Base
+            // Stage 4 (Retropub)
+            31: [0, 100],  // Arcade Carpet
+            32: [16, 100], // Floor Base
 
-            // Stage 5 (WiFi Maiden) - Row 7
-            41: [0, 7], // Server Floor Surface
-            42: [1, 7], // Server Base
+            // Stage 5 (WiFi Maiden)
+            41: [0, 154],  // Server Floor Surface
+            42: [16, 154], // Server Base
 
-            // Stage 6 (Fortress) - Row 8
-            51: [0, 8], // Stone Surface
-            52: [1, 8]  // Stone Base
+            // Stage 6 (Fortress)
+            51: [0, 222],  // Stone Surface
+            52: [16, 222]  // Stone Base
         };
 
-        const mapStage1 = [
-            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
-            [0,3,0,0,5,0,0,6,6,0, 4,0,0,0,0,3,0,5,0,0, 0,6,0,0,4,0,0,5,0,0],
-            [1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1],
-            [2,2,2,2,2,2,2,2,2,2, 2,2,2,2,2,2,2,2,2,2, 2,2,2,2,2,2,2,2,2,2],
-            [2,2,2,2,2,2,2,2,2,2, 2,2,2,2,2,2,2,2,2,2, 2,2,2,2,2,2,2,2,2,2]
-        ];
+        function generateMountainMap() {
+            const rows = 19; 
+            const cols = 315; 
+            let map = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+            for (let c = 0; c < cols; c++) {
+                let surfaceRow;
+                if (c < 40) surfaceRow = 15;
+                else if (c < 220) surfaceRow = 15 - Math.floor((c - 40) / 18); // Climb
+                else if (c < 312) surfaceRow = 5; // Plateau
+                else if (c < 322) surfaceRow = 5 + (c - 312); // Drop off to boss
+                else surfaceRow = 20;
+
+                if (surfaceRow < rows) {
+                    map[surfaceRow][c] = 1; // Grass
+                    
+                    // Randomly place a fence (ID 3) on the row above the grass, spaced out
+                    if (surfaceRow - 1 >= 0 && c % 4 === 0 && Math.random() > 0.5) {
+                        map[surfaceRow - 1][c] = 3; 
+                    }
+
+                    for (let r = surfaceRow + 1; r < rows; r++) {
+                        map[r][c] = 2; // Dirt
+                    }
+                }
+            }
+            return map;
+        }
+        const mapStage1 = generateMountainMap();
 
         const mapStage2 = [
             [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
@@ -650,18 +680,7 @@
             [32,32,32,32,32,32,32,32,32,32, 32,32,32,32,32,32,32,32,32,32, 32,32,32,32,32,32,32,32,32,32]
         ];
 
-        const mapStage5 = [
-            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
-            [41,41,41,41,41,41,41,41,41,41, 41,41,41,41,41,41,41,41,41,41, 41,41,41,41,41,41,41,41,41,41],
-            [42,42,42,42,42,42,42,42,42,42, 42,42,42,42,42,42,42,42,42,42, 42,42,42,42,42,42,42,42,42,42],
-            [42,42,42,42,42,42,42,42,42,42, 42,42,42,42,42,42,42,42,42,42, 42,42,42,42,42,42,42,42,42,42]
-        ];
+        const mapStage5 = [];
 
         const mapStage6 = [
             [0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0],
@@ -677,12 +696,12 @@
         ];
 
         const stageConfigs = [
-            { hasProceduralSky: false, bgImagePath: './stage1_bg.png', bgImage: stage1Img, parallaxSpeed: 0.2, bossDistance: 5000, bossBgImage: bossBg1, tileset: tilesetImg, foregroundMap: mapStage1, hideTilesDuringBoss: false },
-            { hasProceduralSky: false, bgImagePath: './bamboo_bg.png', bgImage: bambooImg, parallaxSpeed: 0.3, bossDistance: 5000, bossBgImage: bossBg2, tileset: tilesetImg, foregroundMap: mapStage2, hideTilesDuringBoss: true },
-            { hasProceduralSky: false, bgImagePath: './city_bg.png', bgImage: cityImg, parallaxSpeed: 0.25, bossDistance: 5000, bossBgImage: bossBg3, tileset: tilesetImg, foregroundMap: mapStage3, hideTilesDuringBoss: true },
-            { hasProceduralSky: false, bgImagePath: './retropub_bg.png', bgImage: pubImg, parallaxSpeed: 0.35, bossDistance: 5000, bossBgImage: bossBg4, tileset: tilesetImg, foregroundMap: mapStage4, hideTilesDuringBoss: true },
-            { hasProceduralSky: false, bgImagePath: './wifi_maiden_bg.png', bgImage: wifiImg, parallaxSpeed: 0.3, bossDistance: 5000, bossBgImage: bossBg5, tileset: tilesetImg, foregroundMap: mapStage5, hideTilesDuringBoss: true },
-            { hasProceduralSky: false, bgImagePath: './fortress_bg.png', bgImage: fortressImg, parallaxSpeed: 0.4, bossDistance: 5000, bossBgImage: bossBg6, tileset: tilesetImg, foregroundMap: mapStage6, hideTilesDuringBoss: true }
+            { mapHeight: 304, hasProceduralSky: false, bgImagePath: './stage1_bg.png', bgImage: stage1Img, parallaxSpeed: 0.2, bossDistance: 5000, bossBgImage: bossBg1, tileset: tilesetImg, foregroundMap: mapStage1, hideTilesDuringBoss: false },
+            { mapHeight: 152, hasProceduralSky: false, bgImagePath: './bamboo_bg.png', bgImage: bambooImg, parallaxSpeed: 0.3, bossDistance: 5000, bossBgImage: bossBg2, tileset: tilesetImg, foregroundMap: mapStage2, hideTilesDuringBoss: false },
+            { mapHeight: 152, hasProceduralSky: false, bgImagePath: './city_bg.png', bgImage: cityImg, parallaxSpeed: 0.25, bossDistance: 5000, bossBgImage: bossBg3, tileset: tilesetImg, foregroundMap: mapStage3, hideTilesDuringBoss: false },
+            { mapHeight: 152, hasProceduralSky: false, bgImagePath: './retropub_bg.png', bgImage: pubImg, parallaxSpeed: 0.35, bossDistance: 5000, bossBgImage: bossBg4, tileset: tilesetImg, foregroundMap: mapStage4, hideTilesDuringBoss: false },
+            { mapHeight: 152, hasProceduralSky: false, bgImagePath: './wifi_maiden_bg.png', bgImage: wifiImg, parallaxSpeed: 0.3, bossDistance: 5000, bossBgImage: bossBg5, tileset: tilesetImg, foregroundMap: mapStage5, hideTilesDuringBoss: false },
+            { mapHeight: 152, hasProceduralSky: false, bgImagePath: './fortress_bg.png', bgImage: fortressImg, parallaxSpeed: 0.4, bossDistance: 5000, bossBgImage: bossBg6, tileset: tilesetImg, foregroundMap: mapStage6, hideTilesDuringBoss: false }
         ];
 
         let activeStage = stageConfigs[0];
@@ -840,6 +859,47 @@
         }
         const boss = new Boss();
 
+        function getSmoothFloorY(worldX, activeStage) {
+            const defaultFloor = activeStage.mapHeight || 152;
+            if (!activeStage || !activeStage.foregroundMap || activeStage.foregroundMap.length === 0) return defaultFloor;
+
+            const tileSize = 16;
+            const col = Math.floor(worldX / tileSize);
+            const localX = worldX % tileSize; 
+            const map = activeStage.foregroundMap;
+
+            let getColY = (c) => {
+                let checkCol = c;
+                const mapCols = map[0].length;
+                
+                // Loop the column check for infinitely scrolling flat stages
+                if (activeStage !== stageConfigs[0]) {
+                    checkCol = ((c % mapCols) + mapCols) % mapCols;
+                } else if (c < 0 || c >= mapCols) {
+                    return defaultFloor;
+                }
+                
+                for (let r = 0; r < map.length; r++) {
+                    let v = map[r][checkCol];
+                    // Solid ground IDs
+                    if (v === 1 || v === 2 || v >= 11) return r * tileSize;
+                }
+                return defaultFloor;
+            };
+
+            let currentY = getColY(col);
+            let nextY = getColY(col + 1);
+
+            // If the next column steps UP, create a smooth mathematical ramp across the 16px tile
+            if (nextY < currentY) {
+                let progress = localX / tileSize;
+                return currentY - ((currentY - nextY) * progress);
+            }
+            
+            return currentY;
+        }
+        const getFloorY = getSmoothFloorY;
+
         function checkCollision(r1, r2) {
             return Math.floor(r1.x) < Math.floor(r2.x + r2.width) &&
                    Math.floor(r1.x + r1.width) > Math.floor(r2.x) &&
@@ -848,7 +908,12 @@
         }
 
         function getMitziHitbox() {
-            return { x: mitzi.x + 14, y: mitzi.y + 14, width: 4, height: 4 };
+            return { x: mitzi.x + 14, y: Math.floor(mitzi.y - cameraY) + 14, width: 4, height: 4 };
+        }
+
+        function getMitziItemHitbox() {
+            // 24x24 hitbox so players don't have to perfectly align the center pixel to grab a medal
+            return { x: mitzi.x + 4, y: Math.floor(mitzi.y - cameraY) + 4, width: 24, height: 24 };
         }
 
         // Strict integer sprite renderer
@@ -873,6 +938,9 @@
         function drawBackground() {
             let activeStage = stageConfigs[currentStage - 1];
 
+            let renderCamY = Math.floor(cameraY);
+            let renderCamX = Math.floor(cameraX);
+
             let bossBgWidth = (activeStage.bossBgImage && activeStage.bossBgImage.width) ? activeStage.bossBgImage.width : canvas.width;
             bossBgWidth = Math.max(canvas.width, bossBgWidth);
 
@@ -892,14 +960,14 @@
 
                 // Draw Parallax Stars
                 stars.forEach(s => {
-                    let drawX = (s.x - cameraX * activeStage.parallaxSpeed) % canvas.width;
+                    let drawX = (s.x - renderCamX * activeStage.parallaxSpeed) % canvas.width;
                     if (drawX < 0) drawX += canvas.width;
                     ctx.fillStyle = s.color;
                     ctx.fillRect(Math.floor(drawX), Math.floor(s.y), s.size, s.size);
                 });
 
                 // Draw Chunky Moon
-                let moonX = (120 - cameraX * (activeStage.parallaxSpeed * 0.25)) % 400; // Slower than stars
+                let moonX = (120 - renderCamX * (activeStage.parallaxSpeed * 0.25)) % 400; // Slower than stars
                 if (moonX < -32) moonX += 400;
                 ctx.fillStyle = "#e0e0e0";
                 const moonPixels = [
@@ -927,9 +995,18 @@
                 if (activeStage.bgImage.complete && activeStage.bgImage.naturalHeight !== 0) {
                     let bgScrollX = (pCam * activeStage.parallaxSpeed) % activeStage.bgImage.width;
                     let baseX = Math.floor(-bgScrollX) - Math.floor(slideIn);
-                    ctx.drawImage(activeStage.bgImage, baseX, 0);
-                    ctx.drawImage(activeStage.bgImage, baseX + activeStage.bgImage.width, 0);
-                    ctx.drawImage(activeStage.bgImage, baseX + activeStage.bgImage.width * 2, 0);
+
+                    let bgScrollY = (renderCamY * activeStage.parallaxSpeed) % activeStage.bgImage.height;
+                    if (bgScrollY < 0) bgScrollY += activeStage.bgImage.height;
+                    let baseY = Math.floor(-bgScrollY);
+
+                    for (let row = -1; row < 3; row++) {
+                        let drawY = baseY + (row * activeStage.bgImage.height);
+                        for (let col = 0; col < 3; col++) {
+                            let drawX = baseX + (col * activeStage.bgImage.width);
+                            ctx.drawImage(activeStage.bgImage, drawX, drawY);
+                        }
+                    }
                 }
             }
 
@@ -937,7 +1014,6 @@
                 const tileSize = 16;
 
                 const colsToDraw = Math.ceil(canvas.width / tileSize) + 1;
-                const rowsToDraw = Math.ceil(canvas.height / tileSize);
 
                 const startCol = Math.floor(cameraX / tileSize);
                 const offsetX = Math.floor(cameraX) % tileSize;
@@ -946,21 +1022,21 @@
                 let shouldDrawTiles = !(activeStage.hideTilesDuringBoss && isBossState);
 
                 if (shouldDrawTiles && activeStage.foregroundMap && activeStage.foregroundMap.length > 0) {
-                    for (let row = 0; row < rowsToDraw && row < activeStage.foregroundMap.length; row++) {
+                    for (let row = 0; row < activeStage.foregroundMap.length; row++) {
                         for (let c = 0; c < colsToDraw; c++) {
-                            const mapCol = (startCol + c) % activeStage.foregroundMap[0].length;
+                            const mapCol = (activeStage === stageConfigs[0])
+                                ? (startCol + c < activeStage.foregroundMap[0].length ? startCol + c : -1)
+                                : (startCol + c) % activeStage.foregroundMap[0].length;
+                            if (mapCol === -1) continue;
+
                             const tileVal = activeStage.foregroundMap[row][mapCol];
                             if (tileVal === 0) continue;
 
-                            const tCol = tileMapDefs[tileVal][0];
-                            const tRow = tileMapDefs[tileVal][1];
-                            
-                            // Slicing math accounting for 1px margins between tiles
-                            const sx = tCol * (16 + 1);
-                            const sy = tRow * (16 + 1);
+                            const sx = tileMapDefs[tileVal][0];
+                            const sy = tileMapDefs[tileVal][1];
 
                             const drawX = (c * tileSize) - offsetX;
-                            let drawY = row * tileSize;
+                            let drawY = Math.floor((row * tileSize) - renderCamY);
 
                             if (tileVal >= 3 && tileVal <= 6) {
                                 drawY += 8; // Scenery overlap
@@ -968,8 +1044,8 @@
 
                             ctx.drawImage(
                                 activeStage.tileset, 
-                                Math.floor(sx), Math.floor(sy), Math.floor(16), Math.floor(16), 
-                                Math.floor(drawX), Math.floor(drawY), Math.floor(16), Math.floor(16)
+                                Math.floor(sx), Math.floor(sy), 16, 16, 
+                                Math.floor(drawX), Math.floor(drawY), 16, 16
                             );
                         }
                     }
@@ -1042,21 +1118,61 @@
 
             if (!mitzi.dead) {
                 // Movement
-                if (keys[keyMap.up] && mitzi.y > 0) mitzi.y -= mitzi.speed;
-                if (keys[keyMap.down] && mitzi.y < canvas.height - mitzi.height) mitzi.y += mitzi.speed;
+                if (keys[keyMap.up] && mitzi.y > cameraY) mitzi.y -= mitzi.speed;
+                if (keys[keyMap.down] && mitzi.y < cameraY + canvas.height - mitzi.height) mitzi.y += mitzi.speed;
                 if (keys[keyMap.left] && mitzi.x > 0) mitzi.x -= mitzi.speed;
-                if (keys[keyMap.right] && mitzi.x < canvas.width / 2) mitzi.x += mitzi.speed;
+                if (keys[keyMap.right] && mitzi.x < canvas.width - mitzi.width) mitzi.x += mitzi.speed;
 
                 // Shooting
                 if (keys[keyMap.shoot] && mitzi.cooldown <= 0) {
                     bullets.push({ 
-                        x: mitzi.x + 32, y: mitzi.y + 15, width: 4, height: 2, 
+                        x: mitzi.x + 32, y: Math.floor(mitzi.y - cameraY) + 15, width: 4, height: 2, 
                         speed: 4, type: mitzi.magic 
                     });
                     mitzi.cooldown = 8;
                 }
             }
             if (mitzi.cooldown > 0) mitzi.cooldown--;
+
+            if (gameState === 'PLAYING' || gameState === 'BOSS_TRANSITION' || gameState === 'BOSS_FIGHT' || gameState === 'STAGE_CLEAR') {
+                let playerWorldX = cameraX + mitzi.x + (mitzi.width / 2);
+                
+                // Get the smooth ramped floor
+                let currentFloorY = getSmoothFloorY(playerWorldX, activeStage);
+
+                // Camera Lerp Logic
+                if (gameState === 'PLAYING') {
+                    let maxCamY = Math.max(0, activeStage.mapHeight - canvas.height);
+                    let targetCameraY = 0;
+                    
+                    if (maxCamY > 0) {
+                        targetCameraY = Math.min(maxCamY, currentFloorY - canvas.height + 32);
+                    }
+                    
+                    cameraY += (targetCameraY - cameraY) * 0.1; 
+                } else {
+                    if (activeStage === stageConfigs[0]) {
+                        // Cinematic pan high into the pure night sky ONLY for Stage 1
+                        let targetCameraY = -80; 
+                        cameraY += (targetCameraY - cameraY) * 0.02; 
+                        currentFloorY = cameraY + canvas.height - 16; 
+                    } else {
+                        // Flat stages stay locked to 0 so the sliding boss BG seam stays flawless
+                        cameraY = 0;
+                        // currentFloorY naturally uses the looping floor mapped from getSmoothFloorY
+                    }
+                }
+
+                // Apply Floor Collision
+                if (mitzi.y > currentFloorY - mitzi.height) {
+                    mitzi.y = currentFloorY - mitzi.height;
+                }
+                
+                // Hard Ceiling
+                if (mitzi.y < cameraY) {
+                    mitzi.y = cameraY;
+                }
+            }
 
             // Update Bullets
             for (let i = bullets.length - 1; i >= 0; i--) {
@@ -1091,7 +1207,13 @@
 
                 // Crystal Collision
                 for (let c = crystals.length - 1; c >= 0; c--) {
-                    if (checkCollision(b, crystals[c])) {
+                    let crystalBox = {
+                        x: crystals[c].x - cameraX,
+                        y: crystals[c].y - cameraY,
+                        width: crystals[c].width,
+                        height: crystals[c].height
+                    };
+                    if (checkCollision(b, crystalBox)) {
                         crystals[c].dy = -2.5;
                         crystals[c].dx += 0.5;
                         crystals[c].colorIndex = (crystals[c].colorIndex + 1) % magicColors.length;
@@ -1114,9 +1236,17 @@
                         
                         // 30% crystal drop rate
                         if (Math.random() < 0.3) {
+                            let dropWorldX = cameraX + e.x;
+                            let dropFloorY = getSmoothFloorY(dropWorldX, activeStage);
+                            let dropWorldY = Math.min(cameraY + e.y, dropFloorY - 18);
                             crystals.push({
-                                x: e.x, y: e.y, width: 8, height: 8,
-                                dx: -0.5, dy: -1.5, colorIndex: 0
+                                x: dropWorldX,
+                                y: dropWorldY,
+                                width: 8,
+                                height: 8,
+                                dx: -0.5,
+                                dy: -1.5,
+                                colorIndex: 0
                             });
                         }
                         
@@ -1161,19 +1291,27 @@
                 c.y += c.dy;
                 c.dy += 0.1; // gravity
                 
-                if (c.y > canvas.height - 8) {
-                    c.y = canvas.height - 8;
+                let floorY = getSmoothFloorY(c.x + (c.width / 2), activeStage);
+                let bounceY = floorY - c.height;
+
+                if (c.y > bounceY) {
+                    c.y = bounceY;
                     c.dy = -1.5;
                     c.dx *= 0.95;
                 }
                 
-                if (c.x < -8 || c.x > canvas.width) {
+                let screenX = c.x - cameraX;
+                let screenY = c.y - cameraY;
+
+                // Off-screen cleanup (scrolled past left or too far right/down)
+                if (screenX < -16 || screenX > canvas.width + 64 || screenY > canvas.height + 64) {
                     crystals.splice(i, 1);
                     continue;
                 }
                 
                 // Player Collect
-                if (!mitzi.dead && checkCollision(getMitziHitbox(), c)) {
+                let crystalScreenBox = { x: screenX, y: screenY, width: c.width, height: c.height };
+                if (!mitzi.dead && checkCollision(getMitziItemHitbox(), crystalScreenBox)) {
                     let colorKey = magicColors[c.colorIndex];
                     if (colorKey === 2) mitzi.magic = 'homing';
                     else if (colorKey === 4) mitzi.magic = 'piercing';
@@ -1184,7 +1322,25 @@
 
             // Spawn Enemies
             if (frameCount % 90 === 0) {
-                enemies.push({ x: 160, y: Math.random() * 130 + 10, width: 8, height: 8, speed: 1.5 });
+                let spawnWorldX = cameraX + canvas.width;
+                let floorY = getSmoothFloorY(spawnWorldX, activeStage);
+                let screenFloorY = floorY - cameraY;
+                let enemyHeight = 8;
+                
+                // Ensure enemies spawn at least 15px above the floor to intersect Mitzi's center hitbox
+                let maxAirY = Math.max(10, Math.min(canvas.height - 30, screenFloorY - enemyHeight - 15));
+                
+                // Spawn randomly within the reachable airspace
+                let spawnY = Math.random() * (maxAirY - 10) + 10;
+                
+                enemies.push({ 
+                    x: canvas.width, // Screen right edge
+                    y: spawnY, 
+                    width: 8, 
+                    height: enemyHeight, 
+                    speed: 1.5, 
+                    isGround: false 
+                });
             }
 
             // Update Enemies & Player Collision
@@ -1274,7 +1430,11 @@
             // Draw Entities
             crystals.forEach(c => {
                 let colorKey = magicColors[c.colorIndex];
-                drawSprite(c.x, c.y, crystalPixels, { 2: colorKey });
+                let drawX = Math.floor(c.x - cameraX);
+                let drawY = Math.floor(c.y - cameraY);
+                if (drawX >= -8 && drawX <= canvas.width && drawY >= -8 && drawY <= canvas.height) {
+                    drawSprite(drawX, drawY, crystalPixels, { 2: colorKey });
+                }
             });
 
             enemies.forEach(e => drawSprite(e.x, e.y, lagSpikePixels));
@@ -1293,7 +1453,7 @@
 
             if (!mitzi.dead && (mitzi.iFrames === 0 || Math.floor(frameCount / 4) % 2 === 0)) {
                 if (mitziImg.complete && mitziImg.naturalHeight !== 0) {
-                    ctx.drawImage(mitziImg, 0, 0, 32, 32, Math.floor(mitzi.x), Math.floor(mitzi.y), 32, 32);
+                    ctx.drawImage(mitziImg, 0, 0, 32, 32, Math.floor(mitzi.x), Math.floor(mitzi.y - cameraY), 32, 32);
                 }
             }
 
@@ -1322,6 +1482,7 @@
             btnStart.addEventListener("click", () => {
                 const menu = document.getElementById("main-menu-ui");
                 if (menu) menu.style.display = "none";
+                resetGame();
                 gameState = "PLAYING";
             });
         }
@@ -1371,6 +1532,7 @@
             });
         }
         initKeyBindings();
+        resetGame();
 
         gameLoop();
     </script>

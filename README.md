@@ -1,6 +1,6 @@
 # Mitzi's Mischief
 
-An authentic Neo Geo Pocket Color (NGPC) spec retro side-scrolling arcade shooter featuring Mitzi the cat!
+A Neo Geo Pocket Color (NGPC) inspired side-scrolling arcade shooter featuring Mitzi the cat!
 
 ## Features
 - **Authentic Retro Spec**: 160x152 native canvas resolution with integer scaling and palette limitations.
