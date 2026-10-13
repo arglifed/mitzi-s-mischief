@@ -521,6 +521,7 @@
             mitzi.level = 1;
             mitzi.magicStocks = [];
             mitzi.chargeTimer = 0;
+            mitzi.satAngle = 0;
             transitionTimer = 0;
             if (keyMap && keyMap.shoot) keys[keyMap.shoot] = false;
             keys[" "] = false;
@@ -542,10 +543,28 @@
             [0, 0, 0, 1, 1, 0, 0, 0]
         ];
 
-        const palette = { 1: "#111111", 2: "#ff0077", 3: "#ffffff", 4: "#ffcc00" };
+        const palette = { 1: "#111111", 2: "#ff0077", 3: "#ffffff", 4: "#ffcc00", 5: "#9cb8cc" };
+
+        const fishPixels = [
+            [0, 0, 0, 1, 1, 1, 1, 0],
+            [1, 0, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 3, 1, 1], 
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 1, 1, 1, 1, 1, 0],
+            [0, 0, 0, 1, 1, 1, 0, 0]
+        ];
+
+        // Narutomaki Swirl Bullet
+        const narutoPixels = [
+            [0, 3, 3, 3, 3, 0],
+            [3, 3, 2, 2, 3, 3],
+            [3, 2, 3, 3, 2, 3],
+            [3, 3, 2, 3, 3, 3],
+            [0, 3, 3, 3, 3, 0]
+        ];
 
         // Change speed to 1 for authentic NGPC weight
-        const mitzi = { x: 20, y: 70, speed: 1, cooldown: 0, width: 32, height: 32, magic: null, dead: false, hp: 3, maxHP: 3, iFrames: 0, exp: 0, level: 1, magicStocks: [], chargeTimer: 0 };
+        const mitzi = { x: 20, y: 70, speed: 1, cooldown: 0, width: 32, height: 32, magic: null, dead: false, hp: 3, maxHP: 3, iFrames: 0, exp: 0, level: 1, magicStocks: [], chargeTimer: 0, satAngle: 0 };
         const bullets = [];
         const bossBullets = [];
         const enemies = [];
@@ -1157,6 +1176,9 @@
             if (mitzi.iFrames > 0) mitzi.iFrames--;
 
             if (!mitzi.dead) {
+                // Upright Orbit Math
+                mitzi.satAngle += 0.08;
+
                 // Movement
                 if (keys[keyMap.up] && mitzi.y > cameraY) mitzi.y -= mitzi.speed;
                 if (keys[keyMap.down] && mitzi.y < cameraY + canvas.height - mitzi.height) mitzi.y += mitzi.speed;
@@ -1172,15 +1194,22 @@
                         let bx = mitzi.x + 32;
                         let by = Math.floor(mitzi.y - cameraY) + 15;
                         
+                        // Calculate Satellite Position
+                        let satX = mitzi.x + 16 + Math.cos(mitzi.satAngle) * 24;
+                        let satY = (mitzi.y - cameraY) + 16 + Math.sin(mitzi.satAngle) * 24;
+                        
+                        // Satellite always fires a supporting shot
+                        bullets.push({ x: satX, y: satY, width: 6, height: 5, speed: 4, type: mitzi.magic, dy: 0, isSatShot: true });
+
                         if (mitzi.level === 1) {
-                            bullets.push({ x: bx, y: by, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0 });
+                            bullets.push({ x: bx, y: by, width: 6, height: 5, speed: 4, type: mitzi.magic, dy: 0 });
                         } else if (mitzi.level === 2) {
-                            bullets.push({ x: bx, y: by - 4, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0 });
-                            bullets.push({ x: bx, y: by + 4, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0 });
+                            bullets.push({ x: bx, y: by - 6, width: 6, height: 5, speed: 4, type: mitzi.magic, dy: 0 });
+                            bullets.push({ x: bx, y: by + 6, width: 6, height: 5, speed: 4, type: mitzi.magic, dy: 0 });
                         } else if (mitzi.level === 3) {
-                            bullets.push({ x: bx, y: by - 6, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: -0.5 });
-                            bullets.push({ x: bx, y: by, width: 6, height: 4, speed: 4, type: mitzi.magic, dy: 0 });
-                            bullets.push({ x: bx, y: by + 6, width: 4, height: 2, speed: 4, type: mitzi.magic, dy: 0.5 });
+                            bullets.push({ x: bx, y: by - 8, width: 6, height: 5, speed: 4, type: mitzi.magic, dy: -0.5 });
+                            bullets.push({ x: bx, y: by, width: 6, height: 5, speed: 4, type: mitzi.magic, dy: 0 }); 
+                            bullets.push({ x: bx, y: by + 8, width: 6, height: 5, speed: 4, type: mitzi.magic, dy: 0.5 });
                         }
                         mitzi.cooldown = 8;
                     }
@@ -1555,11 +1584,24 @@
 
             // Draw Bullets
             bullets.forEach(b => {
-                if (b.type === 'piercing') ctx.fillStyle = palette[4]; // Yellow
-                else if (b.type === 'homing') ctx.fillStyle = palette[2]; // Pink
-                else ctx.fillStyle = palette[3]; // White default
-
-                ctx.fillRect(Math.floor(b.x), Math.floor(b.y), b.width, b.height);
+                if (b.width > 10) { 
+                    // Massive charge bomb laser
+                    ctx.fillStyle = palette[4];
+                    ctx.fillRect(Math.floor(b.x), Math.floor(b.y), b.width, b.height);
+                } else if (b.isSatShot) {
+                    // Small support shot from satellite
+                    ctx.fillStyle = palette[3]; // White
+                    if (b.type === 'piercing') ctx.fillStyle = palette[4];
+                    if (b.type === 'homing') ctx.fillStyle = palette[2];
+                    ctx.fillRect(Math.floor(b.x), Math.floor(b.y), 4, 2);
+                } else {
+                    // Primary Narutomaki bullets
+                    let swap = null; 
+                    if (b.type === 'piercing') swap = { 3: 4 }; // Turn white parts yellow
+                    else if (b.type === 'homing') swap = { 3: 2, 2: 3 }; // Invert pink and white
+                    
+                    drawSprite(b.x, b.y, narutoPixels, swap);
+                }
             });
 
             // Draw Boss Bullets
@@ -1605,6 +1647,18 @@
                 if (mitziImg.complete && mitziImg.naturalHeight !== 0) {
                     ctx.drawImage(mitziImg, 0, 0, 32, 32, Math.floor(mitzi.x), drawY, 32, 32);
                 }
+            }
+
+            // Draw Upright Orbiting Fish Satellite
+            if (!mitzi.dead) {
+                let satX = Math.floor(mitzi.x + 16 + Math.cos(mitzi.satAngle) * 24) - 4;
+                let satY = Math.floor(mitzi.y - cameraY + 16 + Math.sin(mitzi.satAngle) * 24) - 3;
+                
+                let fishSwap = { 1: 5 }; // Light Blue
+                if (mitzi.magic === 'piercing') fishSwap = { 1: 4 };
+                if (mitzi.magic === 'homing') fishSwap = { 1: 2 };
+                
+                drawSprite(satX, satY, fishPixels, fishSwap);
             }
 
             // Draw Health HUD (Native pixel blocks render crisp on canvas)
