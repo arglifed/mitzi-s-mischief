@@ -1316,17 +1316,35 @@
             // Update Crystals
             for (let i = crystals.length - 1; i >= 0; i--) {
                 let c = crystals[i];
-                c.x += c.dx;
-                c.y += c.dy;
-                c.dy += 0.1; // gravity
-                
-                let floorY = getSmoothFloorY(c.x + (c.width / 2), activeStage);
-                let bounceY = floorY - c.height;
 
-                if (c.y > bounceY) {
-                    c.y = bounceY;
-                    c.dy = -1.5;
-                    c.dx *= 0.95;
+                // Point of Collection: Risk pushing to the right side (x > 110) to vacuum items
+                if (!mitzi.dead && mitzi.x > 110) {
+                    c.magnetized = true;
+                }
+
+                if (c.magnetized) {
+                    // Fly rapidly toward Mitzi's center
+                    let targetWorldX = cameraX + mitzi.x + 16;
+                    let targetWorldY = cameraY + mitzi.y + 16;
+                    let angle = Math.atan2(targetWorldY - (c.y + c.height / 2), targetWorldX - (c.x + c.width / 2));
+                    c.dx = Math.cos(angle) * 5; 
+                    c.dy = Math.sin(angle) * 5;
+                    c.x += c.dx;
+                    c.y += c.dy;
+                } else {
+                    // Normal gravity and floor bouncing
+                    c.x += c.dx;
+                    c.y += c.dy;
+                    c.dy += 0.1; 
+                    
+                    let floorY = getSmoothFloorY(c.x + (c.width / 2), activeStage);
+                    let bounceY = floorY - c.height;
+
+                    if (c.y > bounceY) {
+                        c.y = bounceY;
+                        c.dy = -1.5;
+                        c.dx *= 0.95;
+                    }
                 }
                 
                 let screenX = c.x - cameraX;
@@ -1356,28 +1374,49 @@
                 let screenFloorY = floorY - cameraY;
                 let enemyHeight = 8;
                 
-                // Ensure enemies spawn at least 15px above the floor to intersect Mitzi's center hitbox
                 let maxAirY = Math.max(10, Math.min(canvas.height - 30, screenFloorY - enemyHeight - 15));
-                
-                // Spawn randomly within the reachable airspace
                 let spawnY = Math.random() * (maxAirY - 10) + 10;
                 
+                // Roll for enemy behavior type
+                let rand = Math.random();
+                let eType = 'linear';
+                if (rand < 0.33) eType = 'wave';
+                else if (rand < 0.66) eType = 'tracker';
+                else if (rand < 0.85) eType = 'ground';
+                
                 enemies.push({ 
-                    x: canvas.width, // Screen right edge
+                    x: canvas.width, 
                     y: spawnY, 
+                    startY: spawnY, // Anchor for wave calculations
                     width: 8, 
                     height: enemyHeight, 
                     speed: 1.5, 
-                    isGround: false 
+                    type: eType 
                 });
             }
 
             // Update Enemies & Player Collision
             let mBox = getMitziHitbox();
             for (let i = enemies.length - 1; i >= 0; i--) {
-                enemies[i].x -= enemies[i].speed;
+                let e = enemies[i];
+                e.x -= e.speed;
                 
-                if (!mitzi.dead && checkCollision(mBox, enemies[i])) {
+                // Apply specific movement behaviors
+                if (e.type === 'wave') {
+                    // Bob up and down on a sine wave with a 20px amplitude
+                    e.y = e.startY + Math.sin((frameCount + i * 10) * 0.05) * 20;
+                } else if (e.type === 'tracker') {
+                    // Slowly drift Y coordinate toward Mitzi
+                    if (e.y < mitzi.y) e.y += 0.4;
+                    if (e.y > mitzi.y) e.y -= 0.4;
+                } else if (e.type === 'ground') {
+                    // Snap to the dynamic smooth floor terrain
+                    let eWorldX = cameraX + e.x + (e.width / 2);
+                    let eFloorY = getSmoothFloorY(eWorldX, activeStage);
+                    e.y = (eFloorY - cameraY) - e.height;
+                }
+                
+                if (!mitzi.dead && checkCollision(mBox, e)) {
                     if (mitzi.iFrames === 0) {
                         if (!godMode) mitzi.hp--;
                         mitzi.iFrames = 60;
@@ -1388,7 +1427,7 @@
                     }
                 }
 
-                if (enemies[i].x < -8) enemies.splice(i, 1);
+                if (e.x < -8) enemies.splice(i, 1);
             }
 
             // Check Boss Body Collision
