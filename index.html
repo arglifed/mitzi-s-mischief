@@ -714,7 +714,7 @@
         </div>
         <div id="bezel-footer">
             <div class="bezel-badge">★ SPD ★</div>
-            <div class="bezel-hint">ARROWS: MOVE | [SPACE] SHOOT / HOLD FOR BOMB</div>
+            <div class="bezel-hint" id="bezel-hint">ARROWS: MOVE | [SPACE] SHOOT / HOLD FOR BOMB</div>
         </div>
     </div>
 
@@ -747,6 +747,55 @@
             return key;
         }
 
+        function updateBezelControlsHint() {
+            const hintEl = document.getElementById("bezel-hint");
+            if (!hintEl) return;
+
+            const isArrow = (k, dir) => k === dir || k === "Arrow" + dir;
+            const up = keyMap.up || "";
+            const down = keyMap.down || "";
+            const left = keyMap.left || "";
+            const right = keyMap.right || "";
+
+            let moveText = "ARROWS";
+            if (isArrow(up, "Up") && isArrow(down, "Down") && isArrow(left, "Left") && isArrow(right, "Right")) {
+                moveText = "ARROWS";
+            } else if (
+                up.toLowerCase() === "w" &&
+                left.toLowerCase() === "a" &&
+                down.toLowerCase() === "s" &&
+                right.toLowerCase() === "d"
+            ) {
+                moveText = "WASD";
+            } else {
+                const fmtDir = (k) => {
+                    if (!k) return "?";
+                    if (k === " ") return "SPC";
+                    if (isArrow(k, "Up")) return "UP";
+                    if (isArrow(k, "Down")) return "DOWN";
+                    if (isArrow(k, "Left")) return "LEFT";
+                    if (isArrow(k, "Right")) return "RIGHT";
+                    return k.toUpperCase();
+                };
+                moveText = `${fmtDir(up)}/${fmtDir(left)}/${fmtDir(down)}/${fmtDir(right)}`;
+            }
+
+            const fmtKey = (k) => {
+                if (!k) return "SPACE";
+                if (k === " ") return "SPACE";
+                if (isArrow(k, "Up")) return "UP";
+                if (isArrow(k, "Down")) return "DOWN";
+                if (isArrow(k, "Left")) return "LEFT";
+                if (isArrow(k, "Right")) return "RIGHT";
+                if (k.toLowerCase() === "control") return "CTRL";
+                if (k.toLowerCase() === "escape") return "ESC";
+                return k.toUpperCase();
+            };
+
+            const shootText = fmtKey(keyMap.shoot);
+            hintEl.innerText = `${moveText}: MOVE | [${shootText}] SHOOT / HOLD FOR BOMB`;
+        }
+
         function updateRebindButtons() {
             const actions = ['up', 'down', 'left', 'right', 'shoot'];
             actions.forEach(action => {
@@ -758,6 +807,7 @@
                     }
                 }
             });
+            updateBezelControlsHint();
         }
 
         window.addEventListener("keydown", (e) => {
