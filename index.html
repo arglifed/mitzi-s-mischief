@@ -234,6 +234,7 @@
             letter-spacing: 2px;
             text-shadow: 0 0 8px rgba(255, 0, 68, 0.7);
             flex-shrink: 0;
+            text-transform: uppercase;
         }
 
         .bezel-boss-track {
@@ -1086,9 +1087,7 @@
             cameraX = 0;
             cameraY = 0;
             currentStage = 1;
-            boss.active = false;
-            boss.hp = boss.maxHP;
-            boss.shootTimer = 0;
+            boss = new BossRoster[0]();
             mitzi.x = 20;
 
             let activeStage = stageConfigs[currentStage - 1];
@@ -1369,148 +1368,553 @@
         ];
 
         class Boss {
-            constructor() {
-                this.x = 0;
-                this.y = 20;
+            constructor(stageNum) {
+                this.stageNum = stageNum || 1;
                 this.width = 32;
                 this.height = 32;
-                this.maxHP = 50;
-                this.hp = 50;
-                this.speed = 1.5;
+                this.originX = canvas.width - this.width - 12; // 116
+                this.originY = 40;
+                this.x = this.originX;
+                this.y = this.originY;
+                this.maxHP = 60 + (this.stageNum * 30);
+                this.hp = this.maxHP;
                 this.active = false;
-                this.direction = 1;
-                this.shootTimer = 0;
+                this.attackTimer = 0;
+                this.timer = 0;
+                this.phase2 = false;
+                this.flashTimer = 0;
+                this.intangible = false;
+                this.alpha = 1.0;
+                this.name = "BOSS";
+                this.color = "#ff0044";
             }
+
+            enterPhase2() {
+                this.phase2 = true;
+                this.flashTimer = 45; // Breather window: flashes and pauses shooting
+                bossBullets.length = 0; // Classic shmup bullet cancel on phase break
+            }
+
+            fireBullet(x, y, vx, vy, shape = 'orb', colorBase = '#ff006e', extra = {}) {
+                bossBullets.push({
+                    x: x - 2,
+                    y: y - 2,
+                    width: 4,
+                    height: 4,
+                    dx: vx,
+                    dy: vy,
+                    shape: shape,
+                    colorBase: colorBase,
+                    ...extra
+                });
+            }
+
+            getPlayerCenter() {
+                return {
+                    x: mitzi.x + 16,
+                    y: (mitzi.y - cameraY) + 12
+                };
+            }
+
             update() {
                 if (!this.active) return;
 
-                switch (currentStage) {
-                    case 1:
-                        // Stage 1 (Forest): Up/down movement and 3-way spread shot
-                        this.y += this.speed * this.direction;
-                        if (this.y <= 0 || this.y >= 112 - this.height) { // 80px (stays above grass)
-                            this.direction *= -1;
-                        }
-
-                        this.shootTimer++;
-                        if (this.shootTimer >= 90) {
-                            const startX = this.x;
-                            const startY = this.y + this.height / 2;
-                            bossBullets.push(
-                                { x: startX, y: startY, width: 4, height: 4, speed: 3, dy: -1, shape: 'rice', colorBase: '#ff006e' },
-                                { x: startX, y: startY, width: 4, height: 4, speed: 3, dy: 0, shape: 'rice', colorBase: '#ff006e' },
-                                { x: startX, y: startY, width: 4, height: 4, speed: 3, dy: 1, shape: 'rice', colorBase: '#ff006e' }
-                            );
-                            this.shootTimer = 0;
-                        }
-                        break;
-
-                    case 2:
-                        // Stage 2 (Bamboo): Erratic hover and staggered burst fire
-                        this.y = 40 + Math.sin(frameCount * 0.05) * 30;
-
-                        this.shootTimer++;
-                        if (this.shootTimer >= 120) {
-                            const startY = this.y + this.height / 2;
-                            bossBullets.push(
-                                { x: this.x, y: startY, width: 4, height: 4, speed: 4.5, dy: 0, shape: 'rice', colorBase: '#00f2ff' },
-                                { x: this.x + 15, y: startY, width: 4, height: 4, speed: 4.5, dy: 0, shape: 'rice', colorBase: '#00f2ff' },
-                                { x: this.x + 30, y: startY, width: 4, height: 4, speed: 4.5, dy: 0, shape: 'rice', colorBase: '#00f2ff' }
-                            );
-                            this.shootTimer = 0;
-                        }
-                        break;
-
-                    case 3:
-                        // Stage 3 (City) - The Sweeper: Up/down movement and rhythmic sweeping arc
-                        this.y += 2 * this.direction;
-                        if (this.y <= 0 || this.y >= 112 - this.height) {
-                            this.direction *= -1;
-                        }
-
-                        this.shootTimer++;
-                        if (this.shootTimer >= 45) {
-                            this.sweepAngle = (this.sweepAngle || 0) + 0.5;
-                            const startY = this.y + this.height / 2;
-                            bossBullets.push({
-                                x: this.x,
-                                y: startY,
-                                width: 4,
-                                height: 4,
-                                speed: 3,
-                                dy: Math.sin(this.sweepAngle) * 2,
-                                shape: 'orb',
-                                colorBase: '#ffca3a'
-                            });
-                            this.shootTimer = 0;
-                        }
-                        break;
-
-                    case 4:
-                        // Stage 4 (Retropub) - The 4-Way Cross: Centered park and 4-way cross spread
-                        this.y = (112 / 2) - (this.height / 2);
-
-                        this.shootTimer++;
-                        if (this.shootTimer >= 120) {
-                            const startX = this.x;
-                            const startY = this.y + this.height / 2;
-                            bossBullets.push(
-                                { x: startX, y: startY, width: 4, height: 4, dx: -1.5, dy: -1.5, shape: 'orb', colorBase: '#ff003c' },
-                                { x: startX, y: startY, width: 4, height: 4, dx: -1.5, dy: 1.5, shape: 'orb', colorBase: '#ff003c' },
-                                { x: startX, y: startY, width: 4, height: 4, dx: -2.5, dy: 0, shape: 'orb', colorBase: '#ff003c' },
-                                { x: startX, y: startY, width: 4, height: 4, dx: -0.8, dy: 0, shape: 'orb', colorBase: '#ff003c' }
-                            );
-                            this.shootTimer = 0;
-                        }
-                        break;
-
-                    case 5:
-                        // Stage 5 (WiFi Maiden) - The Signal Wave: Teleporting and 5-way broadcast fan
-                        this.moveTimer = (this.moveTimer || 0) + 1;
-                        if (this.moveTimer >= 150) {
-                            this.y = Math.floor(Math.random() * (70 - 10 + 1)) + 10;
-                            this.moveTimer = 0;
-                        }
-
-                        this.shootTimer++;
-                        if (this.shootTimer >= 100) {
-                            const startX = this.x;
-                            const startY = this.y + this.height / 2;
-                            [-2, -1, 0, 1, 2].forEach(dy => {
-                                bossBullets.push({ x: startX, y: startY, width: 4, height: 4, speed: 4, dy: dy, shape: 'amulet', colorBase: '#00f2ff' });
-                            });
-                            this.shootTimer = 0;
-                        }
-                        break;
-
-                    case 6:
-                        // Stage 6 (Fortress) - The Spiral Hell: Figure-8 movement and spiral bullet hell
-                        this.y = 40 + Math.sin(frameCount * 0.03) * 25;
-                        this.x = (canvas.width - this.width - 15) + Math.cos(frameCount * 0.06) * 10;
-
-                        this.shootTimer++;
-                        if (this.shootTimer >= 10) {
-                            this.rot = (this.rot || 0) + 0.4;
-                            const startX = this.x;
-                            const startY = this.y + this.height / 2;
-                            const dx = -2 - Math.cos(this.rot) * 2;
-                            const dy = Math.sin(this.rot) * 2;
-                            bossBullets.push({ x: startX, y: startY, width: 4, height: 4, dx: dx, dy: dy, shape: 'rice', colorBase: '#ff006e' });
-                            this.shootTimer = 0;
-                        }
-                        break;
-
-                    default:
-                        break;
+                if (!this.phase2 && this.hp <= this.maxHP * 0.5) {
+                    this.enterPhase2();
                 }
+
+                if (this.flashTimer > 0) {
+                    this.flashTimer--;
+                }
+
+                this.updateBehavior();
             }
+
+            updateBehavior() {
+                // Overridden by subclasses
+            }
+
             draw() {
                 if (!this.active) return;
-                ctx.fillStyle = '#ff0044';
+                if (this.flashTimer > 0 && Math.floor(this.flashTimer / 3) % 2 === 0) return;
+
+                if (ctx.save) ctx.save();
+                ctx.globalAlpha = this.alpha;
+
+                // Telegraph reticle if boss is mid-teleport
+                if (this.telegraphX !== undefined && this.telegraphX !== null) {
+                    ctx.strokeStyle = (frameCount % 6 < 3) ? '#00f2ff' : '#ff0077';
+                    ctx.lineWidth = 1;
+                    if (ctx.strokeRect) {
+                        ctx.strokeRect(Math.floor(this.telegraphX) + 4, Math.floor(this.telegraphY) + 4, 24, 24);
+                    }
+                }
+
+                ctx.fillStyle = this.phase2 && (frameCount % 16 < 4) ? '#ffffff' : this.color;
                 ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.width, this.height);
+
+                // Inner core detail so placeholder boss reads clearly
+                ctx.fillStyle = '#111116';
+                ctx.fillRect(Math.floor(this.x) + 6, Math.floor(this.y) + 6, this.width - 12, this.height - 12);
+                ctx.fillStyle = this.phase2 ? '#ff0077' : '#ffcc00';
+                ctx.fillRect(Math.floor(this.x) + 12, Math.floor(this.y) + 12, 8, 8);
+
+                if (ctx.restore) ctx.restore();
             }
         }
-        const boss = new Boss();
+
+        // Stage 1 (Forest): PingKo-Style Cosine-Eased Dasher + Dual Spiral/Aimed
+        class ForestBoss extends Boss {
+            constructor() {
+                super(1);
+                this.name = "Briar Pixie";
+                this.color = "#ff006e";
+                this.dashTimer = 60;
+                this.dashProgress = 1;
+                this.dashStartX = this.originX;
+                this.dashStartY = this.originY;
+                this.dashTargetX = this.originX;
+                this.dashTargetY = this.originY;
+            }
+            updateBehavior() {
+                this.dashTimer--;
+                if (this.dashTimer <= 0) {
+                    this.dashStartX = this.x;
+                    this.dashStartY = this.y;
+                    // Glide to opposite vertical half of the arena
+                    this.dashTargetX = 104 + Math.random() * 18;
+                    this.dashTargetY = (this.y < 40) ? (48 + Math.random() * 28) : (6 + Math.random() * 26);
+                    this.dashProgress = 0;
+                    this.dashTimer = this.phase2 ? 65 : 90;
+                }
+
+                if (this.dashProgress < 1) {
+                    this.dashProgress = Math.min(1, this.dashProgress + 0.04);
+                    let ease = (1 - Math.cos(Math.PI * this.dashProgress)) / 2;
+                    this.x = this.dashStartX + (this.dashTargetX - this.dashStartX) * ease;
+                    this.y = this.dashStartY + (this.dashTargetY - this.dashStartY) * ease;
+                } else {
+                    this.timer += 0.06;
+                    this.x = this.dashTargetX + Math.sin(this.timer) * 3;
+                    this.y = Math.max(4, Math.min(78, this.dashTargetY + Math.cos(this.timer * 0.8) * 3));
+                }
+
+                if (this.flashTimer <= 0) this.shoot();
+            }
+            shoot() {
+                this.attackTimer++;
+                const cx = this.x + 8;
+                const cy = this.y + 16;
+                const p = this.getPlayerCenter();
+
+                if (!this.phase2) {
+                    const cycle = Math.floor(this.attackTimer / 120) % 2;
+                    if (cycle === 0) {
+                        // Gently waving 2-stream fan
+                        if (this.attackTimer % 12 === 0) {
+                            let wave = Math.sin(this.attackTimer * 0.12) * 0.55;
+                            this.fireBullet(cx, cy, Math.cos(Math.PI + wave) * 1.8, Math.sin(Math.PI + wave) * 1.8, 'orb', '#00f2ff');
+                            this.fireBullet(cx, cy, Math.cos(Math.PI - wave) * 1.8, Math.sin(Math.PI - wave) * 1.8, 'orb', '#ff006e');
+                        }
+                    } else {
+                        // Aimed 3-way rice spread toward Mitzi
+                        if (this.attackTimer % 30 === 0) {
+                            let a = Math.atan2(p.y - cy, p.x - cx);
+                            for (let i = -1; i <= 1; i++) {
+                                this.fireBullet(cx, cy, Math.cos(a + i * 0.18) * 2.2, Math.sin(a + i * 0.18) * 2.2, 'rice', '#00f2ff');
+                            }
+                        }
+                    }
+                } else {
+                    // Spell Card Phase: 4-way rotating spiral + periodic 3-way aimed rice burst
+                    if (this.attackTimer % 10 === 0) {
+                        let a = this.attackTimer * 0.14;
+                        for (let i = 0; i < 4; i++) {
+                            let off = a + (i * Math.PI / 2);
+                            this.fireBullet(cx, cy, Math.cos(off) * 1.7, Math.sin(off) * 1.7, 'orb', '#ff006e');
+                        }
+                    }
+                    if (this.attackTimer % 55 === 0) {
+                        let a = Math.atan2(p.y - cy, p.x - cx);
+                        for (let i = -1; i <= 1; i++) {
+                            this.fireBullet(cx, cy, Math.cos(a + i * 0.2) * 2.3, Math.sin(a + i * 0.2) * 2.3, 'rice', '#00f2ff');
+                        }
+                    }
+                }
+            }
+        }
+
+        // Stage 2 (Bamboo): SpiralKo-Style Lissajous Figure-8 + Counter-Rotating Rings
+        class BambooBoss extends Boss {
+            constructor() {
+                super(2);
+                this.name = "Shadown Tanuki Sho";
+                this.color = "#00f2ff";
+            }
+            updateBehavior() {
+                this.timer += 0.025;
+                // 2:1 Lissajous Figure-8 in the right-hand airspace
+                this.x = 110 + Math.sin(this.timer) * 12;
+                this.y = 40 + Math.sin(this.timer * 2) * 32;
+                if (this.flashTimer <= 0) this.shoot();
+            }
+            shoot() {
+                this.attackTimer++;
+                const cx = this.x + 12;
+                const cy = this.y + 16;
+                const p = this.getPlayerCenter();
+
+                if (!this.phase2) {
+                    if (this.attackTimer % 28 === 0) {
+                        for (let i = 0; i < 10; i++) {
+                            let a = i * (Math.PI * 2 / 10) + (this.attackTimer * 0.04);
+                            this.fireBullet(cx, cy, Math.cos(a) * 1.6, Math.sin(a) * 1.6, 'rice', '#ff006e');
+                        }
+                    }
+                } else {
+                    // Spell Card: Interlocking reverse spirals + aimed orb
+                    if (this.attackTimer % 24 === 0) {
+                        for (let i = 0; i < 10; i++) {
+                            let a1 = i * (Math.PI * 2 / 10) + (this.attackTimer * 0.06);
+                            let a2 = i * (Math.PI * 2 / 10) - (this.attackTimer * 0.06);
+                            this.fireBullet(cx, cy, Math.cos(a1) * 1.8, Math.sin(a1) * 1.8, 'rice', '#ff006e');
+                            this.fireBullet(cx, cy, Math.cos(a2) * 1.4, Math.sin(a2) * 1.4, 'rice', '#00f2ff');
+                        }
+                    }
+                    if (this.attackTimer % 60 === 0) {
+                        let a = Math.atan2(p.y - cy, p.x - cx);
+                        this.fireBullet(cx, cy, Math.cos(a) * 2.2, Math.sin(a) * 2.2, 'orb', '#ffca3a');
+                    }
+                }
+            }
+        }
+
+        // Stage 3 (City): ShotgunKo-Style Pressure Advance & Cosine Retreat
+        class CityBoss extends Boss {
+            constructor() {
+                super(3);
+                this.name = "Cat Punk";
+                this.color = "#ffca3a";
+                this.retreating = false;
+                this.retreatProgress = 0;
+                this.retreatStartX = this.originX;
+            }
+            updateBehavior() {
+                if (this.retreating) {
+                    this.retreatProgress = Math.min(1, this.retreatProgress + 0.035);
+                    let ease = (1 - Math.cos(Math.PI * this.retreatProgress)) / 2;
+                    this.x = this.retreatStartX + (122 - this.retreatStartX) * ease;
+                    this.y = 40 + Math.sin(this.timer * 0.05) * 26;
+                    if (this.retreatProgress >= 1) this.retreating = false;
+                } else {
+                    this.timer++;
+                    this.x -= 0.35; // Slowly pressures horizontally into the arena
+                    this.y = 40 + Math.sin(this.timer * 0.05) * 32;
+                    if (this.x <= 82) {
+                        this.retreating = true;
+                        this.retreatStartX = this.x;
+                        this.retreatProgress = 0;
+                    }
+                }
+                if (this.flashTimer <= 0) this.shoot();
+            }
+            shoot() {
+                this.attackTimer++;
+                const cx = this.x + 8;
+                const cy = this.y + 16;
+                const p = this.getPlayerCenter();
+
+                if (!this.phase2) {
+                    if (this.attackTimer % 45 === 0) {
+                        let baseA = Math.atan2(p.y - cy, p.x - cx);
+                        for (let j = -2; j <= 2; j++) {
+                            let a = baseA + (j * 0.16);
+                            this.fireBullet(cx, cy, Math.cos(a) * 2.1, Math.sin(a) * 2.1, 'orb', '#ffca3a');
+                        }
+                    }
+                } else {
+                    // Spell Card: Point-Blank Buckshot Wave
+                    if (this.attackTimer % 42 === 0) {
+                        let baseA = Math.atan2(p.y - cy, p.x - cx);
+                        for (let j = -3; j <= 3; j++) {
+                            let a = baseA + (j * 0.14);
+                            this.fireBullet(cx, cy, Math.cos(a) * 2.3, Math.sin(a) * 2.3, 'orb', '#ff003c');
+                        }
+                        for (let s = -1; s <= 1; s += 2) {
+                            let a = baseA + (s * 0.45);
+                            this.fireBullet(cx, cy, Math.cos(a) * 1.6, Math.sin(a) * 1.6, 'rice', '#ffca3a');
+                        }
+                    }
+                }
+            }
+        }
+
+        // Stage 4 (Retropub): CosmicCrow-Style Sine Swoop + Feathered Pinwheel
+        class RetropubBoss extends Boss {
+            constructor() {
+                super(4);
+                this.name = "Grumpy Chef";
+                this.color = "#9d4edd";
+                this.swoopTimer = 140;
+                this.swoopProgress = 1;
+                this.swoopStartY = 40;
+                this.swoopTargetY = 40;
+            }
+            updateBehavior() {
+                const p = this.getPlayerCenter();
+                if (this.swoopProgress >= 1) {
+                    // Gently track toward Mitzi's Y with a pause window before burst
+                    let pauseTrack = (this.attackTimer % 70 < 20);
+                    if (!pauseTrack) {
+                        let dy = (p.y - 16) - this.y;
+                        this.y = Math.max(6, Math.min(78, this.y + dy * 0.03));
+                    }
+                    this.timer += 0.04;
+                    this.x = this.originX + Math.sin(this.timer) * 6;
+
+                    this.swoopTimer--;
+                    if (this.swoopTimer <= 0) {
+                        this.swoopProgress = 0;
+                        this.swoopStartY = this.y;
+                        this.swoopTargetY = Math.max(8, Math.min(76, p.y - 16));
+                    }
+                } else {
+                    this.swoopProgress += 0.02;
+                    if (this.swoopProgress >= 1) {
+                        this.swoopProgress = 1;
+                        this.swoopTimer = 140;
+                    }
+                    let t = this.swoopProgress;
+                    this.y = this.swoopStartY + (this.swoopTargetY - this.swoopStartY) * t;
+                    // Swoop arc dips forward to X = 74 then returns to originX
+                    this.x = this.originX - Math.sin(t * Math.PI) * 42;
+                }
+                if (this.flashTimer <= 0) this.shoot();
+            }
+            shoot() {
+                this.attackTimer++;
+                const cx = this.x + 8;
+                const cy = this.y + 16;
+                const p = this.getPlayerCenter();
+
+                if (!this.phase2) {
+                    if (this.attackTimer % 16 === 0) {
+                        for (let i = -1; i <= 1; i++) {
+                            let a = Math.PI + (i * 0.28) + Math.sin(this.attackTimer * 0.1) * 0.35;
+                            this.fireBullet(cx, cy, Math.cos(a) * 1.9, Math.sin(a) * 1.9, 'rice', '#ff006e');
+                        }
+                    }
+                    if (this.attackTimer % 75 === 0) {
+                        let baseA = Math.atan2(p.y - cy, p.x - cx);
+                        for (let i = 0; i < 8; i++) {
+                            let a = baseA + (i * Math.PI * 2 / 8);
+                            this.fireBullet(cx, cy, Math.cos(a) * 1.4, Math.sin(a) * 1.4, 'orb', '#00f2ff');
+                        }
+                    }
+                } else {
+                    // Spell Card: Stardust Wing Symphony (5-arm spiral + aimed feathers)
+                    if (this.attackTimer % 8 === 0) {
+                        let baseA = this.attackTimer * 0.09;
+                        for (let i = 0; i < 5; i++) {
+                            let a = baseA + (i * Math.PI * 2 / 5);
+                            this.fireBullet(cx, cy, Math.cos(a) * 1.8, Math.sin(a) * 1.8, 'rice', '#ff006e');
+                        }
+                    }
+                    if (this.attackTimer % 55 === 0) {
+                        let baseA = Math.atan2(p.y - cy, p.x - cx);
+                        for (let i = -1; i <= 1; i++) {
+                            let a = baseA + (i * 0.16);
+                            this.fireBullet(cx, cy, Math.cos(a) * 2.4, Math.sin(a) * 2.4, 'rice', '#ffca3a');
+                        }
+                    }
+                }
+            }
+        }
+
+        // Stage 5 (WiFi Maiden Shrine): Lief-Style Ground Stomp Shockwave + Cluster Shells
+        class ShrineBoss extends Boss {
+            constructor() {
+                super(5);
+                this.name = "Proxy";
+                this.color = "#00f2ff";
+                this.stompTimer = 130;
+                this.stompProgress = 1;
+                this.stompStartY = 20;
+                this.clusterShells = [];
+            }
+            updateBehavior() {
+                if (this.stompProgress >= 1) {
+                    this.timer += 0.03;
+                    this.x = this.originX + Math.sin(this.timer) * 6;
+                    this.y = 24 + Math.sin(this.timer * 1.5) * 14;
+                    if (this.flashTimer <= 0) this.shoot();
+
+                    this.stompTimer--;
+                    if (this.stompTimer <= 0) {
+                        this.stompProgress = 0;
+                        this.stompStartY = this.y;
+                        this.stompShockwaveFired = false;
+                    }
+                } else {
+                    this.stompProgress += 0.02;
+                    let t = this.stompProgress;
+                    if (t < 0.35) {
+                        // Slam down to the Row 7 floor (y = 80)
+                        let p = t / 0.35;
+                        let ease = Math.sin(p * Math.PI / 2);
+                        this.y = this.stompStartY + (78 - this.stompStartY) * ease;
+                        if (p > 0.9 && !this.stompShockwaveFired && this.flashTimer <= 0) {
+                            this.stompShockwaveFired = true;
+                            for (let j = 0; j < 12; j++) {
+                                let a = (j * Math.PI * 2) / 12;
+                                this.fireBullet(this.x + 8, this.y + 24, Math.cos(a) * 1.9, Math.sin(a) * 1.9, 'amulet', '#00f2ff');
+                            }
+                        }
+                    } else {
+                        // Rise smoothly back up
+                        let p = (t - 0.35) / 0.65;
+                        let ease = 1 - Math.pow(1 - p, 3);
+                        this.y = 78 + (24 - 78) * ease;
+                    }
+                    if (this.stompProgress >= 1) {
+                        this.stompProgress = 1;
+                        this.stompTimer = this.phase2 ? 100 : 140;
+                    }
+                }
+
+                // Update Cluster Shells that detonate in mid-air
+                for (let i = this.clusterShells.length - 1; i >= 0; i--) {
+                    let shell = this.clusterShells[i];
+                    shell.x -= 1.4;
+                    shell.timer--;
+                    if (shell.timer <= 0 || shell.x < 70) {
+                        let count = this.phase2 ? 10 : 8;
+                        for (let j = 0; j < count; j++) {
+                            let a = (j * Math.PI * 2) / count;
+                            this.fireBullet(shell.x, shell.y, Math.cos(a) * 1.6, Math.sin(a) * 1.6, 'rice', '#ffca3a');
+                        }
+                        this.clusterShells.splice(i, 1);
+                    }
+                }
+            }
+            shoot() {
+                this.attackTimer++;
+                const cx = this.x + 8;
+                const cy = this.y + 16;
+
+                if (!this.phase2) {
+                    if (this.attackTimer % 10 === 0 && this.attackTimer % 90 < 45) {
+                        let a = Math.PI + Math.sin(this.attackTimer * 0.18) * 0.7;
+                        this.fireBullet(cx, cy, Math.cos(a) * 2.1, Math.sin(a) * 2.1, 'rice', '#ffca3a');
+                    }
+                    if (this.attackTimer % 85 === 0) {
+                        this.clusterShells.push({ x: cx, y: Math.max(18, Math.min(72, cy)), timer: 32 });
+                    }
+                } else {
+                    // Spell Card: Counter-spirals + Cluster Shells
+                    if (this.attackTimer % 9 === 0) {
+                        let a1 = Math.PI + Math.sin(this.attackTimer * 0.14) * 0.85;
+                        let a2 = Math.PI - Math.sin(this.attackTimer * 0.14) * 0.85;
+                        this.fireBullet(cx, cy, Math.cos(a1) * 2.0, Math.sin(a1) * 2.0, 'rice', '#ffca3a');
+                        this.fireBullet(cx, cy, Math.cos(a2) * 2.0, Math.sin(a2) * 2.0, 'amulet', '#00f2ff');
+                    }
+                    if (this.attackTimer % 70 === 0) {
+                        this.clusterShells.push({ x: cx, y: 26, timer: 28 });
+                        this.clusterShells.push({ x: cx, y: 66, timer: 28 });
+                    }
+                }
+            }
+        }
+
+        // Stage 6 (Fortress): Satsuki / Daemon-Style Telegraphed Blink + Scythe & Hex Grid
+        class FortressBoss extends Boss {
+            constructor() {
+                super(6);
+                this.name = "Madame Satsuki";
+                this.color = "#ff003c";
+                this.teleportTimer = 130;
+                this.teleportWarnTimer = 0;
+                this.telegraphX = null;
+                this.telegraphY = null;
+                this.scytheFromTop = true;
+            }
+            updateBehavior() {
+                if (this.teleportWarnTimer > 0) {
+                    this.teleportWarnTimer--;
+                    this.alpha = 0.25;
+                    if (this.teleportWarnTimer <= 0) {
+                        this.x = this.telegraphX;
+                        this.y = this.telegraphY;
+                        this.telegraphX = null;
+                        this.telegraphY = null;
+                        this.alpha = 1.0;
+                        this.teleportTimer = this.phase2 ? 105 : 140;
+                        this.flashTimer = 15;
+                    }
+                } else {
+                    this.timer += 0.03;
+                    this.x += (this.originX - this.x) * 0.02;
+                    this.y = Math.max(6, Math.min(78, this.y + Math.sin(this.timer) * 0.5));
+
+                    if (this.flashTimer <= 0) this.shoot();
+
+                    this.teleportTimer--;
+                    if (this.teleportTimer <= 0) {
+                        this.teleportWarnTimer = 28;
+                        this.telegraphX = 92 + Math.random() * 28;
+                        this.telegraphY = 8 + Math.random() * 68;
+                    }
+                }
+            }
+            shoot() {
+                this.attackTimer++;
+                const cx = this.x + 8;
+                const cy = this.y + 16;
+                const p = this.getPlayerCenter();
+
+                if (!this.phase2) {
+                    // 5-arm counter-rotating spiral + scythe sweep
+                    if (this.attackTimer % 12 === 0) {
+                        for (let i = 0; i < 5; i++) {
+                            let a = (this.attackTimer * 0.05) + (i * Math.PI * 2 / 5);
+                            this.fireBullet(cx, cy, Math.cos(a) * 1.7, Math.sin(a) * 1.7, 'rice', '#ff003c');
+                            this.fireBullet(cx, cy, Math.cos(-a) * 1.4, Math.sin(-a) * 1.4, 'orb', '#ffca3a');
+                        }
+                    }
+                    if (this.attackTimer % 55 === 0) {
+                        let a = Math.atan2(p.y - cy, p.x - cx);
+                        for (let j = -1; j <= 1; j++) {
+                            this.fireBullet(cx, cy, Math.cos(a + j * 0.18) * 2.3, Math.sin(a + j * 0.18) * 2.3, 'rice', '#00f2ff');
+                        }
+                    }
+                } else {
+                    // Spell Card: Root System OVERRIDE (8-way spiral + Amulet Firewall + Aimed Needles)
+                    if (this.attackTimer % 9 === 0) {
+                        let baseA = this.attackTimer * 0.08;
+                        for (let i = 0; i < 8; i++) {
+                            let a = baseA + (i * Math.PI * 2 / 8);
+                            this.fireBullet(cx, cy, Math.cos(a) * 1.9, Math.sin(a) * 1.9, 'rice', '#ff003c');
+                        }
+                    }
+                    if (this.attackTimer % 65 === 0) {
+                        for (let i = -3; i <= 3; i++) {
+                            let a = Math.PI + (i * 0.22);
+                            this.fireBullet(cx, cy, Math.cos(a) * 1.6, Math.sin(a) * 1.6, 'amulet', '#ffca3a');
+                        }
+                    }
+                    if (this.attackTimer % 45 === 0) {
+                        let baseA = Math.atan2(p.y - cy, p.x - cx);
+                        for (let i = -1; i <= 1; i++) {
+                            let a = baseA + (i * 0.16);
+                            this.fireBullet(cx, cy, Math.cos(a) * 2.4, Math.sin(a) * 2.4, 'rice', '#00f2ff');
+                        }
+                    }
+                }
+            }
+        }
+
+        const BossRoster = [ForestBoss, BambooBoss, CityBoss, RetropubBoss, ShrineBoss, FortressBoss];
+        let boss = new BossRoster[0]();
 
         function getSmoothFloorY(worldX, activeStage) {
             const defaultFloor = activeStage.mapHeight || 152;
@@ -1922,9 +2326,9 @@
 
                 if (cameraX >= activeStage.bossDistance) {
                     gameState = 'BOSS_TRANSITION';
+                    const BossClass = BossRoster[(currentStage - 1) % BossRoster.length];
+                    boss = new BossClass();
                     boss.active = true;
-                    boss.maxHP = 50 + (currentStage * 25);
-                    boss.hp = boss.maxHP;
                 }
             } else if (gameState === 'BOSS_TRANSITION') {
                 cameraX++;
@@ -1932,12 +2336,12 @@
                 bossBgWidth = Math.max(canvas.width, bossBgWidth);
 
                 let slideIn = cameraX - activeStage.bossDistance;
-                boss.x = (canvas.width - slideIn) + (bossBgWidth - boss.width - 10);
+                boss.x = (canvas.width - slideIn) + (bossBgWidth - boss.width - 12);
 
                 if (slideIn >= bossBgWidth) {
                     gameState = 'BOSS_FIGHT';
-                    boss.shootTimer = 0;
-                    boss.x = canvas.width - boss.width - 10;
+                    boss.x = canvas.width - boss.width - 12;
+                    boss.originX = boss.x;
                 }
             } else if (gameState === 'BOSS_FIGHT') {
                 boss.update();
@@ -2494,6 +2898,10 @@
             if (bBossStrip && bBossStrip.style) {
                 if ((gameState === 'BOSS_FIGHT' || gameState === 'BOSS_TRANSITION') && boss.active) {
                     bBossStrip.style.display = 'flex';
+                    const titleEl = bBossStrip.querySelector ? bBossStrip.querySelector('.bezel-boss-title') : null;
+                    if (titleEl) {
+                        titleEl.innerText = boss.phase2 ? `★ ${boss.name} (SPELL) ★` : boss.name;
+                    }
                     let pct = Math.max(0, Math.min(100, Math.floor((boss.hp / boss.maxHP) * 100)));
                     if (bBossFill && bBossFill.style) {
                         bBossFill.style.width = pct + '%';

@@ -49,6 +49,31 @@ if (scriptMatch) {
         }
       }
       if (wavesSpawned < 5) throw new Error('Expected at least 5 waves to spawn');
+
+      console.log('Testing BossRoster and 6 stage bosses...');
+      if (!BossRoster || BossRoster.length !== 6) throw new Error('BossRoster length is not 6');
+      const expectedNames = [
+        "Briar Pixie",
+        "Shadown Tanuki Sho",
+        "Cat Punk",
+        "Grumpy Chef",
+        "Proxy",
+        "Madame Satsuki"
+      ];
+      BossRoster.forEach((BossClass, idx) => {
+        const b = new BossClass();
+        if (b.name !== expectedNames[idx]) throw new Error('Boss name mismatch: ' + b.name + ' vs ' + expectedNames[idx]);
+        b.active = true;
+        for (let f = 0; f < 120; f++) b.update();
+        if (bossBullets.length === 0) throw new Error('Boss did not fire bullets in Phase 1: ' + b.name);
+        b.hp = Math.floor(b.maxHP * 0.4);
+        b.update();
+        if (!b.phase2) throw new Error('Boss failed to enter Phase 2: ' + b.name);
+        if (b.flashTimer !== 44) throw new Error('Flash timer not set on phase 2 entry');
+        for (let f = 0; f < 120; f++) b.update();
+        console.log('Validated Boss: ' + b.name + ' (HP: ' + b.maxHP + ', Phase 2 trigger OK)');
+        bossBullets.length = 0;
+      });
     `);
     console.log('No syntax errors found on load.');
     setTimeout(() => { console.log('Successfully ran test simulation.'); process.exit(0); }, 50);
