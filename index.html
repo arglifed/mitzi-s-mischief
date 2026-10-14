@@ -1785,6 +1785,131 @@
             }
         }
 
+        // Choreographed Wave Sequences per Stage (Cycles deterministically as cameraX advances)
+        const stageWaveScripts = [
+            // Stage 1 (Forest): Introduces basic formations & ground crawlers on the mountain steps
+            ['v_arrow_mid', 'helix_pair', 'ground_convoy', 'stair_down', 'pincer_trackers', 'stair_up'],
+            // Stage 2 (Bamboo): Heavy weaving & high/low splits
+            ['helix_pair', 'stair_down', 'stair_up', 'pincer_trackers', 'v_arrow_high', 'v_arrow_low'],
+            // Stage 3 (City): Fast tracker pincers & ground artillery
+            ['ground_convoy', 'pincer_trackers', 'helix_pair', 'ground_convoy', 'v_arrow_mid', 'stair_down'],
+            // Stage 4 (Retropub): Dense arcade formations
+            ['stair_down', 'stair_up', 'helix_pair', 'pincer_trackers', 'ground_convoy', 'v_arrow_mid'],
+            // Stage 5 (WiFi Maiden): Precision bullet-hell lanes
+            ['pincer_trackers', 'helix_pair', 'v_arrow_high', 'v_arrow_low', 'helix_pair', 'stair_down'],
+            // Stage 6 (Fortress): Full gauntlet
+            ['ground_convoy', 'helix_pair', 'pincer_trackers', 'stair_down', 'stair_up', 'ground_convoy']
+        ];
+
+        function spawnChoreographedWave(formation, screenFloorY, maxAirY) {
+            const enemyHeight = 8;
+            const topLane = 16;
+            const midLane = Math.floor((topLane + maxAirY) * 0.5);
+            const lowLane = Math.max(topLane + 16, maxAirY - 8);
+
+            if (formation === 'v_arrow_mid' || formation === 'v_arrow_high' || formation === 'v_arrow_low') {
+                // 3 Linear Fliers in a crisp V-Arrow formation
+                let anchorY = formation === 'v_arrow_high' ? topLane + 12 : (formation === 'v_arrow_low' ? lowLane - 12 : midLane);
+                const offsets = [0, -12, 12];
+                for (let s = 0; s < 3; s++) {
+                    let yPos = Math.max(10, Math.min(maxAirY, anchorY + offsets[s]));
+                    enemies.push({
+                        x: canvas.width + (s * 14),
+                        y: yPos,
+                        startY: yPos,
+                        width: 8,
+                        height: enemyHeight,
+                        speed: 1.5,
+                        type: 'linear',
+                        shootCooldown: 30 + (s * 20),
+                        shotsLeft: (s === 0) ? 1 : 0,
+                        dropsCrystal: (s === 2) // Last ship in squad drops crystal
+                    });
+                }
+            } else if (formation === 'stair_down' || formation === 'stair_up') {
+                // 4 Linear Fliers in a clean diagonal staircase
+                for (let s = 0; s < 4; s++) {
+                    let t = s / 3;
+                    let ratio = (formation === 'stair_down') ? t : (1 - t);
+                    let yPos = Math.floor(topLane + ratio * (lowLane - topLane));
+                    enemies.push({
+                        x: canvas.width + (s * 15),
+                        y: yPos,
+                        startY: yPos,
+                        width: 8,
+                        height: enemyHeight,
+                        speed: 1.5,
+                        type: 'linear',
+                        shootCooldown: 35 + (s * 18),
+                        shotsLeft: (s % 2 === 0) ? 1 : 0,
+                        dropsCrystal: (s === 3)
+                    });
+                }
+            } else if (formation === 'helix_pair') {
+                // Twin Wave Fliers weaving in a symmetrical DNA double-helix (inverted phases)
+                for (let w = 0; w < 2; w++) {
+                    enemies.push({
+                        x: canvas.width + (w * 12),
+                        y: midLane,
+                        startY: midLane,
+                        phase: w * Math.PI, // 180-degree opposite sine wave phase
+                        width: 8,
+                        height: enemyHeight,
+                        speed: 1.4,
+                        type: 'wave',
+                        shootCooldown: 40 + (w * 25),
+                        shotsLeft: 1,
+                        dropsCrystal: (w === 1)
+                    });
+                }
+            } else if (formation === 'ground_convoy') {
+                // 2 Ground Crawlers marching along terrain + 1 high-altitude Tracker escort
+                for (let g = 0; g < 2; g++) {
+                    enemies.push({
+                        x: canvas.width + (g * 22),
+                        y: screenFloorY - enemyHeight,
+                        startY: screenFloorY - enemyHeight,
+                        width: 8,
+                        height: enemyHeight,
+                        speed: 1.2,
+                        type: 'ground',
+                        shootCooldown: 45 + (g * 30),
+                        shotsLeft: 2,
+                        dropsCrystal: (g === 1)
+                    });
+                }
+                enemies.push({
+                    x: canvas.width + 10,
+                    y: topLane,
+                    startY: topLane,
+                    width: 8,
+                    height: enemyHeight,
+                    speed: 1.4,
+                    type: 'tracker',
+                    shootCooldown: 35,
+                    shotsLeft: 1,
+                    dropsCrystal: false
+                });
+            } else if (formation === 'pincer_trackers') {
+                // Top and Bottom lane Trackers converging toward Mitzi's vertical level
+                const lanes = [topLane, lowLane];
+                for (let p = 0; p < 2; p++) {
+                    enemies.push({
+                        x: canvas.width + (p * 10),
+                        y: lanes[p],
+                        startY: lanes[p],
+                        width: 8,
+                        height: enemyHeight,
+                        speed: 1.6,
+                        type: 'tracker',
+                        shootCooldown: 30 + (p * 15),
+                        shotsLeft: 2,
+                        dropsCrystal: (p === 1)
+                    });
+                }
+            }
+        }
+
         function update() {
             if (gameState !== 'PLAYING' && gameState !== 'BOSS_FIGHT' && gameState !== 'BOSS_TRANSITION') {
                 return;
@@ -2010,8 +2135,8 @@
                         enemies.splice(j, 1);
                         score += 100;
                         
-                        // 30% crystal drop rate
-                        if (Math.random() < 0.3) {
+                        // Deterministic crystal drop from squad anchors
+                        if (e.dropsCrystal) {
                             let dropWorldX = cameraX + e.x;
                             let dropFloorY = getSmoothFloorY(dropWorldX, activeStage);
                             let dropWorldY = Math.min(cameraY + e.y, dropFloorY - 18);
@@ -2150,88 +2275,19 @@
                 }
             }
 
-            // Spawn Enemies in Fun Waves
-            if (!boss.active && frameCount % 85 === 0) {
+            // Spawn Enemies in Deterministic Choreographed Waves
+            if (gameState === 'PLAYING' && !boss.active && cameraX > 0 && cameraX % 80 === 0) {
                 let spawnWorldX = cameraX + canvas.width;
                 let floorY = getSmoothFloorY(spawnWorldX, activeStage);
                 let screenFloorY = floorY - cameraY;
                 let enemyHeight = 8;
-                let maxAirY = Math.max(12, Math.min(canvas.height - 30, screenFloorY - enemyHeight - 15));
-                let baseSpawnY = Math.random() * (maxAirY - 14) + 14;
+                let maxAirY = Math.max(24, Math.min(canvas.height - 30, screenFloorY - enemyHeight - 15));
 
-                let waveRoll = Math.random();
-                if (waveRoll < 0.35) {
-                    // Squad of 3 Linear Fliers (V-shape or staggered line)
-                    let squadY = baseSpawnY;
-                    for (let s = 0; s < 3; s++) {
-                        let offsetY = (s === 1) ? -12 : (s === 2 ? 12 : 0);
-                        let finalY = Math.max(10, Math.min(maxAirY, squadY + offsetY));
-                        enemies.push({
-                            x: canvas.width + (s * 14),
-                            y: finalY,
-                            startY: finalY,
-                            width: 8,
-                            height: enemyHeight,
-                            speed: 1.5,
-                            type: 'linear',
-                            shootCooldown: 30 + (s * 25),
-                            shotsLeft: (s === 0 || s === 1) ? 1 : 0
-                        });
-                    }
-                } else if (waveRoll < 0.60) {
-                    // Twin Wave Fliers
-                    for (let w = 0; w < 2; w++) {
-                        let wY = (w === 0) ? Math.max(14, baseSpawnY - 16) : Math.min(maxAirY, baseSpawnY + 16);
-                        enemies.push({
-                            x: canvas.width + (w * 16),
-                            y: wY,
-                            startY: wY,
-                            width: 8,
-                            height: enemyHeight,
-                            speed: 1.4,
-                            type: 'wave',
-                            shootCooldown: 40 + (w * 25),
-                            shotsLeft: 1
-                        });
-                    }
-                } else if (waveRoll < 0.82) {
-                    // Hunter Tracker + Ground Crawler Combo
-                    enemies.push({
-                        x: canvas.width,
-                        y: baseSpawnY,
-                        startY: baseSpawnY,
-                        width: 8,
-                        height: enemyHeight,
-                        speed: 1.3,
-                        type: 'tracker',
-                        shootCooldown: 35,
-                        shotsLeft: 2
-                    });
-                    enemies.push({
-                        x: canvas.width + 18,
-                        y: screenFloorY - enemyHeight,
-                        startY: screenFloorY - enemyHeight,
-                        width: 8,
-                        height: enemyHeight,
-                        speed: 1.2,
-                        type: 'ground',
-                        shootCooldown: 50,
-                        shotsLeft: 2
-                    });
-                } else {
-                    // Agile Solo Tracker
-                    enemies.push({
-                        x: canvas.width,
-                        y: baseSpawnY,
-                        startY: baseSpawnY,
-                        width: 8,
-                        height: enemyHeight,
-                        speed: 1.8,
-                        type: 'tracker',
-                        shootCooldown: 30,
-                        shotsLeft: 2
-                    });
-                }
+                let script = stageWaveScripts[(currentStage - 1) % stageWaveScripts.length];
+                let waveIndex = Math.floor(cameraX / 80) - 1;
+                let formation = script[waveIndex % script.length];
+
+                spawnChoreographedWave(formation, screenFloorY, maxAirY);
             }
 
             // Update Enemies & Player Collision
@@ -2242,8 +2298,8 @@
                 
                 // Apply specific movement behaviors
                 if (e.type === 'wave') {
-                    // Bob up and down on a sine wave with a 20px amplitude
-                    e.y = e.startY + Math.sin((frameCount + i * 10) * 0.05) * 20;
+                    // Bob up and down smoothly using fixed spawn phase
+                    e.y = e.startY + Math.sin(frameCount * 0.06 + (e.phase || 0)) * 18;
                 } else if (e.type === 'tracker') {
                     // Slowly drift Y coordinate toward Mitzi
                     let mitziScreenY = mitzi.y - cameraY;
