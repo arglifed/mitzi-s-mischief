@@ -291,15 +291,36 @@
             border-radius: 6px;
         }
 
-        canvas {
+        .canvas-container {
+            position: relative;
             width: 640px;
             height: 608px;
+            margin: 0 auto;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
             background-color: #000;
             border: 4px solid #08080c;
             border-radius: 6px;
             image-rendering: pixelated;
             box-sizing: border-box;
             display: block;
+        }
+
+        /* Authentic NGPC LCD / CRT Pixel Grid Overlay */
+        .lcd-grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: linear-gradient(rgba(0, 0, 0, 0.15) 50%, transparent 50%), 
+                        linear-gradient(90deg, rgba(0, 0, 0, 0.15) 50%, transparent 50%);
+            background-size: 4px 4px; /* Matches scaled pixel ratio (4x) */
+            border-radius: 6px;
         }
 
         #main-menu-ui {
@@ -662,7 +683,10 @@
 
 
         <div id="game-wrapper" style="position: relative; width: 640px; margin: 0 auto; overflow: hidden;">
-            <canvas id="gameCanvas" width="160" height="152"></canvas>
+            <div class="canvas-container">
+                <canvas id="gameCanvas" width="160" height="152"></canvas>
+                <div class="lcd-grid-overlay"></div>
+            </div>
 
         <div id="message-ui" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 6; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.7);">
             <h2 id="message-title" style="font-family: 'DotGothic16', sans-serif; font-size: 48px; color: #fff; margin: 0; text-shadow: 4px 4px 0px #ff0077;">GAME OVER</h2>
