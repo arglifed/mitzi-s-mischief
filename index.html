@@ -747,28 +747,204 @@
         const ctx = canvas.getContext("2d");
         ctx.imageSmoothingEnabled = false;
 
-        const defaultKeyMap = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", shoot: " " };
-        let keyMap = { ...defaultKeyMap };
+        // Expanded KeyMap to support gamepad button indices and arcade sticks
+        const defaultKeyMap = { 
+            up: { key: "ArrowUp", gp: null }, 
+            down: { key: "ArrowDown", gp: null }, 
+            left: { key: "ArrowLeft", gp: null }, 
+            right: { key: "ArrowRight", gp: null }, 
+            shoot: { key: " ", gp: 0 } // Default shoot to button 0 (A / South)
+        };
+
+        function normalizeKeyMap(raw) {
+            const res = {};
+            for (let act of ['up', 'down', 'left', 'right', 'shoot']) {
+                const def = defaultKeyMap[act];
+                const item = raw ? raw[act] : null;
+                if (!item) {
+                    res[act] = { ...def };
+                } else if (typeof item === 'string') {
+                    res[act] = { key: item, gp: def.gp };
+                } else if (typeof item === 'object') {
+                    res[act] = {
+                        key: item.key !== undefined ? item.key : def.key,
+                        gp: item.gp !== undefined ? item.gp : def.gp
+                    };
+                } else {
+                    res[act] = { ...def };
+                }
+            }
+            return res;
+        }
+
+        let keyMap = normalizeKeyMap(null);
         try {
             if (typeof localStorage !== 'undefined') {
                 const saved = JSON.parse(localStorage.getItem('mitziBinds'));
                 if (saved && typeof saved === 'object') {
-                    keyMap = { ...defaultKeyMap, ...saved };
+                    keyMap = normalizeKeyMap(saved);
                 }
             }
         } catch (e) {
-            keyMap = { ...defaultKeyMap };
+            keyMap = normalizeKeyMap(null);
         }
 
         let rebindingAction = null;
+        let rebindHeldInputs = new Set();
         const keys = {};
         let devMode = false;
         let godMode = false;
         let transitionTimer = 0;
+        let prevShootPressed = false;
+
+        window.addEventListener("gamepadconnected", (e) => {
+            console.log("Gamepad connected:", e.gamepad.id);
+        });
+        window.addEventListener("gamepaddisconnected", (e) => {
+            console.log("Gamepad disconnected:", e.gamepad.id);
+        });
+
+        function getActiveGamepadInputs() {
+            const held = new Set();
+            const gamepads = (typeof navigator !== 'undefined' && navigator.getGamepads) ? navigator.getGamepads() : [];
+            for (let gp of gamepads) {
+                if (!gp) continue;
+                for (let i = 0; i < gp.buttons.length; i++) {
+                    if (gp.buttons[i]?.pressed) held.add(`b_${i}`);
+                }
+                for (let a = 0; a < gp.axes.length; a++) {
+                    if (gp.axes[a] < -0.5) held.add(`a_${a}_-`);
+                    if (gp.axes[a] > 0.5) held.add(`a_${a}_+`);
+                }
+            }
+            return held;
+        }
+
+        function pollGamepadRebind(action) {
+            const gamepads = (typeof navigator !== 'undefined' && navigator.getGamepads) ? navigator.getGamepads() : [];
+            for (let gp of gamepads) {
+                if (!gp) continue;
+                // Check buttons
+                for (let i = 0; i < gp.buttons.length; i++) {
+                    if (gp.buttons[i]?.pressed) {
+                        const id = `b_${i}`;
+                        if (!rebindHeldInputs.has(id)) {
+                            return { type: 'button', index: i };
+                        }
+                    }
+                }
+                // Check D-pad / Axes
+                for (let a = 0; a < gp.axes.length; a++) {
+                    if (gp.axes[a] < -0.5) {
+                        const id = `a_${a}_-`;
+                        if (!rebindHeldInputs.has(id)) {
+                            return { type: 'axis', index: a, dir: '-' };
+                        }
+                    } else if (gp.axes[a] > 0.5) {
+                        const id = `a_${a}_+`;
+                        if (!rebindHeldInputs.has(id)) {
+                            return { type: 'axis', index: a, dir: '+' };
+                        }
+                    }
+                }
+            }
+            // Release held inputs when no longer pressed
+            for (let id of [...rebindHeldInputs]) {
+                let stillPressed = false;
+                for (let gp of gamepads) {
+                    if (!gp) continue;
+                    if (id.startsWith('b_')) {
+                        const idx = parseInt(id.slice(2));
+                        if (gp.buttons[idx]?.pressed) stillPressed = true;
+                    } else if (id.startsWith('a_')) {
+                        const [, ax, dir] = id.split('_');
+                        const aIdx = parseInt(ax);
+                        if (dir === '-' && gp.axes[aIdx] < -0.5) stillPressed = true;
+                        if (dir === '+' && gp.axes[aIdx] > 0.5) stillPressed = true;
+                    }
+                }
+                if (!stillPressed) rebindHeldInputs.delete(id);
+            }
+            return null;
+        }
+
+        function isActionPressed(actionOrConfig) {
+            let action = null;
+            let config = null;
+            if (typeof actionOrConfig === 'string') {
+                action = actionOrConfig;
+                config = keyMap[action];
+            } else if (actionOrConfig && typeof actionOrConfig === 'object') {
+                config = actionOrConfig;
+                for (let act of ['up', 'down', 'left', 'right', 'shoot']) {
+                    if (keyMap[act] === config) { action = act; break; }
+                }
+            }
+            if (!config) return false;
+
+            // Check keyboard
+            if (config.key && keys[config.key]) return true;
+
+            // Check gamepad
+            const gamepads = (typeof navigator !== 'undefined' && navigator.getGamepads) ? navigator.getGamepads() : [];
+            for (let gp of gamepads) {
+                if (!gp) continue;
+                if (config.gp !== undefined && config.gp !== null) {
+                    if (typeof config.gp === 'number' && gp.buttons[config.gp]?.pressed) return true;
+                    if (typeof config.gp === 'object') {
+                        if (config.gp.type === 'button' && gp.buttons[config.gp.index]?.pressed) return true;
+                        if (config.gp.type === 'axis') {
+                            const val = gp.axes[config.gp.index] || 0;
+                            if (config.gp.dir === '-' && val < -0.5) return true;
+                            if (config.gp.dir === '+' && val > 0.5) return true;
+                        }
+                    }
+                }
+                // Default fallback arcade stick mappings (e.g. D-pad buttons 12-15 or Axis 0/1)
+                if (action === 'up' && (gp.buttons[12]?.pressed || gp.axes[1] < -0.5)) return true;
+                if (action === 'down' && (gp.buttons[13]?.pressed || gp.axes[1] > 0.5)) return true;
+                if (action === 'left' && (gp.buttons[14]?.pressed || gp.axes[0] < -0.5)) return true;
+                if (action === 'right' && (gp.buttons[15]?.pressed || gp.axes[0] > 0.5)) return true;
+                if (action === 'shoot' && (gp.buttons[0]?.pressed || gp.buttons[2]?.pressed)) return true; // A or X button
+            }
+            return false;
+        }
 
         function formatKeyName(key) {
+            if (!key) return "";
             if (key === " ") return "Space";
             return key;
+        }
+
+        function formatGamepadInput(gp) {
+            if (gp === null || gp === undefined) return "";
+            if (typeof gp === 'number') {
+                const names = { 0: "BTN A", 1: "BTN B", 2: "BTN X", 3: "BTN Y", 12: "D-UP", 13: "D-DOWN", 14: "D-LEFT", 15: "D-RIGHT" };
+                return names[gp] || `BTN ${gp}`;
+            }
+            if (typeof gp === 'object') {
+                if (gp.type === 'button') {
+                    const names = { 0: "BTN A", 1: "BTN B", 2: "BTN X", 3: "BTN Y", 12: "D-UP", 13: "D-DOWN", 14: "D-LEFT", 15: "D-RIGHT" };
+                    return names[gp.index] || `BTN ${gp.index}`;
+                }
+                if (gp.type === 'axis') {
+                    if (gp.index === 0) return gp.dir === '-' ? "STICK L" : "STICK R";
+                    if (gp.index === 1) return gp.dir === '-' ? "STICK UP" : "STICK DOWN";
+                    return `AXIS ${gp.index}${gp.dir}`;
+                }
+            }
+            return String(gp);
+        }
+
+        function formatBindingDisplay(action) {
+            const config = keyMap[action];
+            if (!config) return "---";
+            const k = formatKeyName(config.key);
+            const g = formatGamepadInput(config.gp);
+            if (k && g) return `${k} | ${g}`;
+            if (k) return k;
+            if (g) return g;
+            return "---";
         }
 
         function updateBezelControlsHint() {
@@ -776,10 +952,10 @@
             if (!hintEl) return;
 
             const isArrow = (k, dir) => k === dir || k === "Arrow" + dir;
-            const up = keyMap.up || "";
-            const down = keyMap.down || "";
-            const left = keyMap.left || "";
-            const right = keyMap.right || "";
+            const up = (typeof keyMap.up === 'object' ? keyMap.up.key : keyMap.up) || "";
+            const down = (typeof keyMap.down === 'object' ? keyMap.down.key : keyMap.down) || "";
+            const left = (typeof keyMap.left === 'object' ? keyMap.left.key : keyMap.left) || "";
+            const right = (typeof keyMap.right === 'object' ? keyMap.right.key : keyMap.right) || "";
 
             let moveText = "ARROWS";
             if (isArrow(up, "Up") && isArrow(down, "Down") && isArrow(left, "Left") && isArrow(right, "Right")) {
@@ -816,7 +992,9 @@
                 return k.toUpperCase();
             };
 
-            const shootText = fmtKey(keyMap.shoot);
+            const shootConfig = keyMap.shoot;
+            const shootKey = typeof shootConfig === 'object' ? shootConfig.key : shootConfig;
+            const shootText = fmtKey(shootKey);
             hintEl.innerText = `${moveText}: MOVE | [${shootText}] SHOOT / HOLD FOR BOMB`;
         }
 
@@ -825,7 +1003,7 @@
             actions.forEach(action => {
                 const btn = document.getElementById(`btn-bind-${action}`);
                 if (btn) {
-                    btn.innerText = formatKeyName(keyMap[action]);
+                    btn.innerText = formatBindingDisplay(action);
                     if (btn.classList && btn.classList.remove) {
                         btn.classList.remove('active');
                     }
@@ -837,7 +1015,15 @@
         window.addEventListener("keydown", (e) => {
             if (rebindingAction) {
                 if (e.preventDefault) e.preventDefault();
-                keyMap[rebindingAction] = e.key;
+                if (e.key === "Escape") {
+                    rebindingAction = null;
+                    updateRebindButtons();
+                    return;
+                }
+                if (!keyMap[rebindingAction] || typeof keyMap[rebindingAction] !== 'object') {
+                    keyMap[rebindingAction] = { ...defaultKeyMap[rebindingAction] };
+                }
+                keyMap[rebindingAction].key = e.key;
                 try {
                     if (typeof localStorage !== 'undefined') {
                         localStorage.setItem('mitziBinds', JSON.stringify(keyMap));
@@ -861,7 +1047,8 @@
                 }
             }
 
-            if (e.key === keyMap.shoot || e.key === " ") {
+            const shootKey = typeof keyMap.shoot === 'object' ? keyMap.shoot.key : keyMap.shoot;
+            if (e.key === shootKey || e.key === " ") {
                 if (gameState === 'GAME_OVER' || gameState === 'GAME_CLEAR') {
                     resetGame();
                     gameState = 'PLAYING';
@@ -923,7 +1110,10 @@
             mitzi.chargeTimer = 0;
             mitzi.satAngle = 0;
             transitionTimer = 0;
-            if (keyMap && keyMap.shoot) keys[keyMap.shoot] = false;
+            if (keyMap && keyMap.shoot) {
+                const sk = typeof keyMap.shoot === 'object' ? keyMap.shoot.key : keyMap.shoot;
+                if (sk) keys[sk] = false;
+            }
             keys[" "] = false;
         }
 
@@ -1652,13 +1842,13 @@
                 mitzi.satAngle += 0.08;
 
                 // Movement
-                if (keys[keyMap.up] && mitzi.y > cameraY) mitzi.y -= mitzi.speed;
-                if (keys[keyMap.down] && mitzi.y < cameraY + canvas.height - mitzi.height) mitzi.y += mitzi.speed;
-                if (keys[keyMap.left] && mitzi.x > 0) mitzi.x -= mitzi.speed;
-                if (keys[keyMap.right] && mitzi.x < canvas.width - mitzi.width) mitzi.x += mitzi.speed;
+                if (isActionPressed('up') && mitzi.y > cameraY) mitzi.y -= mitzi.speed;
+                if (isActionPressed('down') && mitzi.y < cameraY + canvas.height - mitzi.height) mitzi.y += mitzi.speed;
+                if (isActionPressed('left') && mitzi.x > 0) mitzi.x -= mitzi.speed;
+                if (isActionPressed('right') && mitzi.x < canvas.width - mitzi.width) mitzi.x += mitzi.speed;
 
                 // Shooting & Charging Logic
-                if (keys[keyMap.shoot]) {
+                if (isActionPressed('shoot')) {
                     mitzi.chargeTimer++;
                     
                     // Only fire regular bullets if we haven't reached the 60-frame charge threshold
@@ -2273,11 +2463,13 @@
             } else if (gameState === 'STAGE_TRANSITION') {
                 if (messageUi && messageUi.style) messageUi.style.display = 'flex';
                 if (messageTitle) messageTitle.innerText = "STAGE " + currentStage + " CLEAR";
-                if (messageSub) messageSub.innerText = "PRESS [" + formatKeyName(keyMap.shoot).toUpperCase() + "] TO CONTINUE";
+                const continueShootKey = typeof keyMap.shoot === 'object' ? (keyMap.shoot.key || "SPACE") : keyMap.shoot;
+                if (messageSub) messageSub.innerText = "PRESS [" + formatKeyName(continueShootKey).toUpperCase() + "] TO CONTINUE";
             } else if (gameState === 'GAME_OVER' || gameState === 'GAME_CLEAR') {
                 if (messageUi && messageUi.style) messageUi.style.display = 'flex';
                 if (messageTitle) messageTitle.innerText = gameState === 'GAME_OVER' ? "GAME OVER" : "MISSION ACCOMPLISHED";
-                if (messageSub) messageSub.innerText = "PRESS [" + formatKeyName(keyMap.shoot).toUpperCase() + "] TO RESTART";
+                const restartShootKey = typeof keyMap.shoot === 'object' ? (keyMap.shoot.key || "SPACE") : keyMap.shoot;
+                if (messageSub) messageSub.innerText = "PRESS [" + formatKeyName(restartShootKey).toUpperCase() + "] TO RESTART";
             }
 
             updateBezelHUD();
@@ -2428,6 +2620,47 @@
         }
 
         function gameLoop() {
+            // Check gamepad rebinding
+            if (rebindingAction) {
+                const gpInput = pollGamepadRebind(rebindingAction);
+                if (gpInput) {
+                    if (!keyMap[rebindingAction] || typeof keyMap[rebindingAction] !== 'object') {
+                        keyMap[rebindingAction] = { ...defaultKeyMap[rebindingAction] };
+                    }
+                    keyMap[rebindingAction].gp = gpInput;
+                    try {
+                        if (typeof localStorage !== 'undefined') {
+                            localStorage.setItem('mitziBinds', JSON.stringify(keyMap));
+                        }
+                    } catch (err) {}
+                    rebindingAction = null;
+                    updateRebindButtons();
+                }
+            }
+
+            // Global Shoot input handling (Keyboard / Gamepad) for Game Over / Stage Transition
+            const shootPressedNow = isActionPressed('shoot');
+            if (shootPressedNow && !prevShootPressed && !rebindingAction) {
+                if (gameState === 'GAME_OVER' || gameState === 'GAME_CLEAR') {
+                    resetGame();
+                    gameState = 'PLAYING';
+                    const menu = document.getElementById('main-menu-ui');
+                    if (menu && menu.style) menu.style.display = 'none';
+                } else if (gameState === 'STAGE_TRANSITION') {
+                    currentStage++;
+                    activeStage = stageConfigs[currentStage - 1];
+                    cameraX = 0;
+                    mitzi.x = 20;
+                    let spawnWorldX = cameraX + mitzi.x + (mitzi.width / 2);
+                    let startFloor = getSmoothFloorY(spawnWorldX, activeStage);
+                    mitzi.y = startFloor - mitzi.height;
+                    cameraY = Math.max(0, Math.min(activeStage.mapHeight - canvas.height, startFloor - canvas.height + 40));
+                    mitzi.magic = null;
+                    gameState = 'PLAYING';
+                }
+            }
+            prevShootPressed = shootPressedNow;
+
             update();
             draw();
         }
@@ -2466,7 +2699,7 @@
         const btnResetBinds = document.getElementById("btn-reset-binds");
         if (btnResetBinds && btnResetBinds.addEventListener) {
             btnResetBinds.addEventListener("click", () => {
-                keyMap = { ...defaultKeyMap };
+                keyMap = normalizeKeyMap(null);
                 try {
                     if (typeof localStorage !== 'undefined') {
                         localStorage.removeItem('mitziBinds');
@@ -2494,8 +2727,9 @@
                 if (btn && btn.addEventListener) {
                     btn.addEventListener("click", () => {
                         rebindingAction = action;
+                        rebindHeldInputs = getActiveGamepadInputs();
                         updateRebindButtons();
-                        btn.innerText = "PRESS KEY";
+                        btn.innerText = "PRESS KEY / GP";
                         if (btn.classList && btn.classList.add) {
                             btn.classList.add('active');
                         }
